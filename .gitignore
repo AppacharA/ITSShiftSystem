@@ -1,0 +1,13 @@
+#Ignore the virtual environment files
+_pycache_/
+
+Include/
+Lib/
+Scripts/
+
+#Ignore the Spreadsheets
+.xlsx
+
+#Other miscellaneous files to ignore
+pip-selfcheck.json
+pyenv.cfg
