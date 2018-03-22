@@ -41,7 +41,14 @@ def checkIn(db, workerNameTuple, actualCheckInTime, location, date): #TODO: Deci
 	cursor.close()
 
 def frontEndCheckIn():
-	currentDate = datetime.today().strftime("%Y-%m-%d")
+	
+	currentInfo = datetime.today()
+	currentDate = currentInfo.strftime("%Y-%m-%d")
+	checkinTime = currentInfo.strftime("%H:%M")
+	#Figure out how to get location. Perhaps from IP? IN ANY CASE THIS IS A PLACEHOLDER.
+	location = "CMC"
+
+	#ALSO FIGURE OUT HOW TO GET THE WORKER NAME/ USERNAME. PRESUMABLY FROM THE LOGGING IN ITSELF
 
 #TODO: FIGURE OUT HOW THIS FLOW SHOULD WORK
 #current idea: have every worker login as the same "worker" account, then just deal with checkingin via the names.

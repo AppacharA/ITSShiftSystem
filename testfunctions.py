@@ -8,7 +8,7 @@ import re
 
 def adminAddWorker(): 
 	name = input("Type the first and last name of the worker you want to add here, followed by the username and the class year, separated by commas. For example, 'John Doe, jdoe, 2018'")
-	inputArray = name.split(,)
+	inputArray = name.split(",")
 	print("Here's what I have. Name: " + inputArray[0] + ", Username: " + inputArray[1] + ", Class year: " + inputArray[2])
 	if input("Is that correct? (y/n)") == "y":
 		nameArray = inputArray[0].split() #get firstname and last name
@@ -28,32 +28,32 @@ def adminRemoveWorker():
 
 
 
-def addWorker(workerTuple): #take in information of worker as a tuple (FirstName, LastName, username, classyear)
-	cursor = db.cursor() #create a new cursor
+# def addWorker(workerTuple): #take in information of worker as a tuple (FirstName, LastName, username, classyear)
+# 	cursor = db.cursor() #create a new cursor
 	
-	#check if employee table exists
-	cursor.execute("SELECT * " 
-		"FROM information_schema.tables "
-.		"WHERE table_schema = 'test' "
-		"AND table_name = 'employeeinfo'"
-		"LIMIT 1")
+# 	#check if employee table exists
+# 	cursor.execute("SELECT * " 
+# 		"FROM information_schema.tables "
+# .		"WHERE table_schema = 'test' "
+# 		"AND table_name = 'employeeinfo'"
+# 		"LIMIT 1")
 
 
-	if (cursor.rowcount == 0): #If your query returned a row, then the table exists
-		print ("There is no table of Employees! Consider creating one from scratch.")
+# 	if (cursor.rowcount == 0): #If your query returned a row, then the table exists
+# 		print ("There is no table of Employees! Consider creating one from scratch.")
 
-	else:
+# 	else:
 
-		query = ("INSERT INTO employeeinfo "
-			"(firstName, lastName, username, classYear) VALUES (%s, %s, %s, %s)")
+# 		query = ("INSERT INTO employeeinfo "
+# 			"(firstName, lastName, username, classYear) VALUES (%s, %s, %s, %s)")
 
-		#data = (workerName[0], workerName[1])
-		cursor.execute(query, workerTuple)
+# 		#data = (workerName[0], workerName[1])
+# 		cursor.execute(query, workerTuple)
 		
-		db.commit()
-		return "Worker successfully added." #MAYBE INPUT BETTER TEST OF VALIDITY?
+# 		db.commit()
+# 		return "Worker successfully added." #MAYBE INPUT BETTER TEST OF VALIDITY?
 
-	cursor.close()
+# 	cursor.close()
 
 def removeWorker(workernameTuple): #workername must be a tuple
 	cursor = db.cursor() #create a new cursor
@@ -232,63 +232,104 @@ def initializeShiftEmployeeLinker(database, listofWorkers):
 		#filename = input("Place ITS Schedule Spreadsheet in the same folder as this program, then type its filename here (e.g Schedule.xlsx): ")
 		filename = "Schedule.xlsx"
 		wb = load_workbook(filename)
-		
+		shiftTime = "8:00" #The helpdesk starts bright and early!
+		Day = "Monday"
+		timeRegex = re.compile('\d?\d:\d\d') #This regex matches any string that contains a Time (xx:xx)
+		shiftRegex = re.compile('\dh')
+		miscRegex = re.compile('[^a-zA-z.\s]') #This regex matches any string that contains a number i.e a non-name cell.
+		AMBoolean = True
 
-		timeRegex = re.compile('[^a-zA-z.\s]') #This regex matches any string that contains a number i.e a non-name cell.
 		for col in range(1,15): #this corresponds to columns A through N
-			for row in range(2,52): #this corresponds to the maximum row that the schedule spreadsheet currently has. Modify as necessary.
+			for row in range(2,53): #this corresponds to the maximum row that the schedule spreadsheet currently has. Modify as necessary. #THIS DOESN'T HIT THE LAST SHIFT ON SUNDAY NIGHT IN THE LIBE.
+				
 				cellValue = scheduleSheet.cell(row = row, column = col).value
-				#print (str(row), str(col))
+
 				#print (cellValue)
-				if cellValue != None:
-					cellValue = str(cellValue)	
-					if timeRegex.search(cellValue) == None: #check that you're not actually dealing with a blank cell or a Time Cell, using the regex initialized above.
-						Day = AuxiliaryFunctions.getDay(col) #Get the day of the shift as a string.
-						location = AuxiliaryFunctions.getLocation(col) #get the location of the shift.
-						shiftTime = AuxiliaryFunctions.getShiftTime(row, col)
-						#now to get the name of the worker (and thus their identity from the employeeTable)
-						#print (cellName)
-						workerName = AuxiliaryFunctions.getStudent(listofWorkers, cellValue)
-						print (workerName)
+				if cellValue != None: 
+					cellValue = str(cellValue) #make sure you're dealing with a string.
+					
+					if timeRegex.search(cellValue) == None and shiftRegex.search(cellValue) == None: #You're not dealing with a time, or any cell that has a number in it.
+
+						if miscRegex.search(cellValue) == None:
+							Day = AuxiliaryFunctions.getDay(col) #Get the day of the shift as a string.
+							location = AuxiliaryFunctions.getLocation(col) #get the location of the shift.
+							#shiftTime = AuxiliaryFunctions.getShiftTime(row, col)
+
+							#now to get the name of the worker (and thus their identity from the employeeTable)
+							
+							workerName = AuxiliaryFunctions.getStudent(listofWorkers, cellValue)
+
+							print (workerName)
+							print (shiftTime)
+							print ()
+
+							employeeQuery = ("SELECT id " 	#TODO: FIGURE OUT AN ELEGANT WAY TO SOPHIA PROCESS
+									"FROM employeeInfo "
+									"WHERE firstName = %s "
+									"AND lastName = %s"
+									)
+
+							
+							
+							#workerName is a tuple of the form (firstName, lastName)
+							
+							cursor.execute(employeeQuery, workerName)
+							result = cursor.fetchone()
+							#for some reason cursor returns results as a tuple so....
+							
+							employeeid = result[0]
+
+							#print ("Employee: " + str(employeeid))
+							
+							
+							#If we have a worker, we must also have a shift!
+							shiftQuery = ("SELECT id " 
+									"FROM ShiftList "
+									"WHERE Day = %s "
+									"AND checkinTime = %s "
+									"AND Location = %s"
+									)
+							cursor.execute(shiftQuery, (Day, shiftTime, location))
+							result = cursor.fetchone()
+							shiftid = result[0]
+							
+							#having gotten an employeeID and a shiftID, we append things to the shiftlinker table.
+							inputQuery = ("INSERT INTO shiftEmployeeLinker (employeeID, shiftID)"
+											"VALUES (%s, %s)")
+
+							values = (employeeid, shiftid)
+
+							cursor.execute(inputQuery, values)
+
+					else: #If you've hit a cell that has a number in it, you need to extract the shift time.
+						if timeRegex.search(cellValue) == None: #if you don't have a time match, you have hit a cell that tells you how long a shift is. 
+						#you need to switch to the lefthand column
+							cellValue = str(scheduleSheet.cell(row = row, column = col-1).value)
+
+						shiftTime = timeRegex.search(cellValue).group(0)
+
+						if "12" in shiftTime or shiftTime == "1:05": #the or statement is there just to catch the friday 4a shift, which has a weird time and won't toggle the boolean.
+							#flip AM/PM if there's a 12 in the hour.
+							AMBoolean = not AMBoolean
+
+
+						#Next, convert shift time to 24hour format.
+						if AMBoolean:
+							shiftTime = shiftTime + "AM"
+						else:
+							shiftTime = shiftTime + "PM"
+
+						#print (shiftTime)
+						shiftTime = datetime.strptime(shiftTime, "%I:%M%p")
+						shiftTime = shiftTime.strftime("%H:%M")
+
+
+						#deal with yet another edge case on weekends... 
+						if (Day == "Friday" or Day == "Saturday") and shiftTime == "20:00":
+							AMBoolean = True
 
 						
-						employeeQuery = ("SELECT id " 	#TODO: FIGURE OUT AN ELEGANT WAY TO SOPHIA PROCESS
-								"FROM employeeInfo "
-								"WHERE firstName = %s "
-								"AND lastName = %s"
-								)
 
-						
-						
-						#workerName is a tuple of the form (firstName, lastName)
-						
-						cursor.execute(employeeQuery, workerName)
-						result = cursor.fetchone()
-						#for some reason cursor returns results as a tuple so....
-						print (result)
-						employeeid = result[0]
-
-						print ("Employee: " + str(employeeid))
-						
-						
-						#If we have a worker, we must also have a shift!
-						shiftQuery = ("SELECT id " 
-								"FROM ShiftList "
-								"WHERE Day = %s "
-								"AND checkinTime = %s "
-								"AND Location = %s"
-								)
-						cursor.execute(shiftQuery, (Day, shiftTime, location))
-						result = cursor.fetchone()
-						shiftid = result[0]
-						
-						#having gotten an employeeID and a shiftID, we append things to the shiftlinker table.
-						inputQuery = ("INSERT INTO shiftEmployeeLinker (employeeID, shiftID)"
-										"VALUES (%s, %s)")
-
-						values = (employeeid, shiftid)
-
-						cursor.execute(inputQuery, values)
 
 	cursor.close()
 
