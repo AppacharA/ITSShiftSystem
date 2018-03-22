@@ -124,7 +124,7 @@ def initializeEmployeeInfoTable(database, workerlist): #takes in all the workers
 
 
 
-def initializeShiftList(database): 
+def initializeShiftList(database): #TODO FIX THE SHIFTLIST SO THAT THERE IS NOT A SUBREQUESTED COLUMN.
 	#pass in startDate and endDate as Python dateTime objects
 	dateholder = input("When does the term start? (mm/dd/yyyy): ")
 	startDate = datetime.strptime(dateholder, "%m/%d/%Y")
@@ -151,7 +151,7 @@ def initializeShiftList(database):
 			"checkinTime TIME,"
 			"Location VARCHAR(25) NOT NULL DEFAULT 'CMC', "
 			"Date DATE NOT NULL, " #A DATE must be input in the form YYYY/MM/DD
-			"Day VARCHAR(15), "
+			"Day VARCHAR(15)"
 			"subRequested BOOLEAN NOT NULL DEFAULT '0' )")
 		
 

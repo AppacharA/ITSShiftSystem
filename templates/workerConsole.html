@@ -1,57 +1,57 @@
 <head>
    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}"> 
-   <!--<link rel="stylesheet" href="css/main.css"> -->
+    
 </head>
 
 <h1>ITS Helpdesk Worker Headquarters</h1>
 
 <main>
   
+     
+   
   <input id="tab1" type="radio" name="tabs" checked>
-  <label for="tab1">Codepen</label>
+  <label for="tab1">Clock In</label>
     
   <input id="tab2" type="radio" name="tabs">
-  <label for="tab2">Dribbble</label>
+  <label for="tab2">Lab Rounds</label>
     
-  <input id="tab3" type="radio" name="tabs">
-  <label for="tab3">Dropbox</label>
+  
+  
+  <input id="tab3" type="radio" name="tabs" onclick = "populateTable()" >
+  <label for="tab3">Sub Requests</label>
+
+
+
     
   <input id="tab4" type="radio" name="tabs">
-  <label for="tab4">Drupal</label>
+  <label for="tab4">Shift Calendar</label>
     
   <section id="content1"> <!--For this one you want a clock and the checkin button -->
     <p>
       Bacon ipsum dolor sit amet beef venison beef ribs kielbasa. Sausage pig leberkas, t-bone sirloin shoulder bresaola. Frankfurter rump porchetta ham. Pork belly prosciutto brisket meatloaf short ribs.
     </p>
-     <!-- TODO: Move this styling out of this file-->
-    <style>
-.button {         
-    background-color: #4CAF50;
-    border: none;
-    color: white;
-    padding: 15px 25px;
-    text-align: center;
-    font-size: 16px;
-    cursor: pointer;
-}
+   
 
-.button:hover {
-    background: green;
-}
-</style>
+    <p>
 
-    <button class="button" onclick = "checkin()">Check-In</button>
+    <span id = "checkinClock">&nbsp;</span>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
-    <script type=text/javascript>
-      function checkin(){
-      $.post("/background_process_test") }
+    <script src = "{{url_for('static', filename='js/workerConsole.js')}}"></script> <!-- why does this only work when the script is placed after the variable is initialized -->
+    </p>
+     
+   
+    
 
-      
+    <button class="button" id="checkinButton" onclick = "checkIn()">Check-In</button>
 
-    </script>
-
-
-
+    <!-- <script>     
+     //This code is to ensure that if the user is already checked in, the button remains disabled even upon page refresh.
+    var checkedIn = '{{data[0]}}';
+    var checkInTime = '{{data[1]}}';
+  
+    window.onload = enableDisableCheckin(checkedIn, checkInTime); //Check if user is checked in on page reload.
+    </script>  -->   
+  
   </section>
     
   <section id="content2"> <!--For this one you want sub requests -->
@@ -63,7 +63,29 @@
     </p>
   </section>
     
-  <section id="content3"> <!--For this one you want maybe the full calendar of the shifts? -->
+  <section id="content3"> <!--For this one you want the sub requests -->
+    <table style = "width:100%" id = "subRequestableShiftTable">
+      <tr> <!-- defining the table headers... -->
+        <th>Time</th>
+        <th>Location</th>
+        <th>Date</th>
+        <th>Day</th>
+        <th>?!?!?!?</th>
+      </tr> 
+
+    {% for row in subRequestableShifts %}
+    <tr>
+      <td>{{row[1]}}</td>
+      <td>{{row[2]}}</td>
+      <td>{{row[3]}}</td>
+      <td>{{row[4]}}</td>
+      <td><button class="button" onclick = "requestSub('{{row[0]}}')">Request Sub</button> </td> <!-- you can pass the direct shiftid this is amazing!-->
+    </tr>
+    
+    {% endfor %}
+    </table>
+    
+    
     <p>
       Bacon ipsum dolor sit amet beef venison beef ribs kielbasa. Sausage pig leberkas, t-bone sirloin shoulder bresaola. Frankfurter rump porchetta ham. Pork belly prosciutto brisket meatloaf short ribs.
     </p>
@@ -80,5 +102,6 @@
       Jerky jowl pork chop tongue, kielbasa shank venison. Capicola shank pig ribeye leberkas filet mignon brisket beef kevin tenderloin porchetta. Capicola fatback venison shank kielbasa, drumstick ribeye landjaeger beef kevin tail meatball pastrami prosciutto pancetta. Tail kevin spare ribs ground round ham ham hock brisket shoulder. Corned beef tri-tip leberkas flank sausage ham hock filet mignon beef ribs pancetta turkey.
     </p>
   </section>
-    
+
+  
 </main>
