@@ -40,10 +40,17 @@
     </p>
      
    
-    
+    <!-- We want to disable the button and display check in time if the user has already checked in.-->
+     
 
-    <button class="button" id="checkinButton" onclick = "checkIn()">Check-In</button>
 
+    <button class="button" id="checkinButton" onclick = "checkIn()"  {% if data[0] == True %} disabled > {{data[1]}} </button> <!-- disable the button if he's already checked in for a shift. -->
+
+    {% else %}
+
+    <button class="button" id="checkinButton" onclick = "checkIn()"  > Check-In </button>
+
+    {%endif%}
     <!-- <script>     
      //This code is to ensure that if the user is already checked in, the button remains disabled even upon page refresh.
     var checkedIn = '{{data[0]}}';
@@ -73,13 +80,17 @@
         <th>?!?!?!?</th>
       </tr> 
 
-    {% for row in subRequestableShifts %}
+    {% for row in subRequestableShifts %} <!-- row is a tuple containing the following info: (shiftid, time, location, date, day, subRequested)-->
     <tr>
       <td>{{row[1]}}</td>
       <td>{{row[2]}}</td>
       <td>{{row[3]}}</td>
       <td>{{row[4]}}</td>
-      <td><button class="button" onclick = "requestSub('{{row[0]}}')">Request Sub</button> </td> <!-- you can pass the direct shiftid this is amazing!-->
+      {% if row[5] == False %} <!-- if the shift has not been sub requested -->
+      <td><button class="button" value = "subUnrequested" onclick = "requestUnrequestSub(this, '{{row[0]}}')" >Request Sub</button> </td> <!-- you can pass the direct shiftid this is amazing!-->
+      {% else %}
+      <td><button class="button" value = "subRequested" onclick = "requestUnrequestSub(this, '{{row[0]}}')">Unrequest Sub</button> </td>
+      {%endif%}
     </tr>
     
     {% endfor %}

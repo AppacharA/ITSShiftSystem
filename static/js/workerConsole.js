@@ -27,9 +27,9 @@ function sayHello(){
 	alert("Hello")
 }
 
-function sayHello(input){
-	alert (input)
-}
+// function sayHello(input){
+// 	alert (input)
+// }
 function checkIn(){ //A function to check in a worker.
   //checkInTime = getCurrentTime(); //Get current time.
 
@@ -41,9 +41,24 @@ function checkIn(){ //A function to check in a worker.
   document.getElementById("checkinButton").innerText = "Already Checked In!"
 }
 
-function requestSub(shiftID){
-  //alert (shiftID)
-  $.post("/subRequest", {shiftID: shiftID})
+
+
+function requestUnrequestSub(element, shiftID){
+  if (element.value == "subRequested" ) {//In this case, we are unrequesting a sub.
+    $.post("/unrequestSub", {shiftID: shiftID})
+
+    element.innerText = "Request Sub";
+
+    element.value = "subUnrequested" //update button value to reflect that we unrequested a sub.
+  }
+
+  else if (element.value == "subUnrequested"){ //In this case, we must request a sub.
+    $.post("/requestSub", {shiftID: shiftID})
+
+    element.innerText = "Unrequest Sub";
+
+    element.value = "subRequested" //update button value to reflect that we requested a sub.
+  }
 
 }
 

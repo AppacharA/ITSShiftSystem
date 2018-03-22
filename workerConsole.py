@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request
 import MySQLdb
-from workerFunctions import frontEndCheckIn, getSubRequestableShifts, frontEndRequestSub
+from workerFunctions import frontEndCheckIn, getSubRequestableShifts, frontEndRequestSub, frontEndUnrequestSub
 app = Flask(__name__)
 
 @app.route('/workerConsole')
@@ -54,11 +54,19 @@ def background_process_test():
 
 	return ("nothing")
 
-@app.route('/subRequest', methods = ['POST'])
-def subRequest():
+@app.route('/requestSub', methods = ['POST'])
+def requestSub():
 	
 	shiftID = request.form['shiftID']
 	frontEndRequestSub(shiftID)
+
+	return ("nothing")
+
+@app.route('/unrequestSub', methods = ['POST'])
+def unrequestSub():
+	
+	shiftID = request.form['shiftID']
+	frontEndUnrequestSub(shiftID)
 
 	return ("nothing")
 
