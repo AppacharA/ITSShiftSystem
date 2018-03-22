@@ -52,15 +52,75 @@ def frontEndCheckIn():
 
 #TODO: FIGURE OUT HOW THIS FLOW SHOULD WORK
 #current idea: have every worker login as the same "worker" account, then just deal with checkingin via the names.
-db = MySQLdb.connect(host = "localhost",
-						 user = "Anirudh",
-						 passwd = "password",
-						 db = "test")
 
 
-#time to test!
-workerNameTuple = ("Anirudh", "Appachar")
-location = "CMC"
-actualcheckinTime = "13:15" #NOTE  You'll need to deal with 24 hour time as well
-date = "2018-03-27"
-checkIn(db, workerNameTuple, actualcheckinTime, location, date)
+
+def getSubRequestableShifts(db):#TODO- Modify to work based on username.       #This will get the list of shifts that are in the future that you can request subs for.
+       currentInfo = datetime.today()
+       #currentDate = currentInfo.strftime("%Y-%m-%d")
+       #currentTime = currentInfo.strftime("%H:%M")
+       currentDate = "2018/03/26"
+       currentTime = "18:30"
+       workerNameTuple = ("Alexis", "Engel")
+
+       #first get employeeid
+       cursor = db.cursor()
+       shiftQuery = ("SELECT id from employeeinfo where firstName = %s and lastName = %s")
+       cursor.execute(shiftQuery, workerNameTuple)
+       result = cursor.fetchone()
+       employeeID = result[0]
+
+      #next get all possible shifts in the future that the employee can take using inner join
+      subQuery = ("SELECT * FROM ShiftList "
+                              "INNER JOIN ShiftEmployeeLinker "
+                              "ON ShiftList.id = ShiftEmployeeLinker.shiftID "
+                              "WHERE (ShiftEmployeeLinker.employeeID = %s "
+                              "AND (ShiftList.date = %s AND ShiftList.checkinTime > %s) )"
+                              "OR (ShiftEmployeeLinker.employeeID = %s AND ShiftList.date > %s)")
+      try:
+              subQueryData = (employeeID, currentDate, currentTime, employeeID, currentDate)
+              cursor.execute(subQuery, subQueryData)
+      except Exception as e:
+              print (e)
+              print (cursor._last_executed)
+      subRequestableShifts = cursor.fetchall()
+      return subRequestableShifts
+      #Here's a challenge- can you inner join across all three tables to get the employeename in the results as well?
+
+def requestSub(db, employeeID, shiftID):
+      cursor = db.cursor()
+      subRequest = ("UPDATE shiftEmployeeLinker SET subRequested = TRUE WHERE employeeID = %s and shiftID = %s")
+      cursor.execute(subRequest, (employeeID, shiftID))
+      cursor.close()
+      db.commit()
+      return
+
+def frontEndRequestSub(shiftID): #TODO- Modify to work with a username
+      workerNameTuple = ("Alexis", "Engel")
+      db = MySQLdb.connect(host = "localhost",
+                                               user = "Anirudh",
+                                               passwd = "password",
+                                               db = "test")
+      cursor = db.cursor();
+      #get employeeID
+      query = ("SELECT id FROM employeeinfo WHERE firstName = %s AND lastName = %s")
+      cursor.execute(query, workerNameTuple)
+      result = cursor.fetchone()
+      employeeID = result[0]
+      requestSub(db, employeeID, shiftID)
+      cursor.close()
+      db.close()
+#TODO: FIGURE OUT HOW THIS FLOW SHOULD WORK
+#current idea: have every worker login as the same "worker" account, then just deal with checkingin via the names.
+# db = MySQLdb.connect(host = "localhost",
+#                                               user = "Anirudh",
+#                                               passwd = "password",
+#                                               db = "test")
+
+
+# #time to test!
+# workerNameTuple = ("Anirudh", "Appachar")
+# location = "CMC"
+# actualcheckinTime = "13:15" #NOTE  You'll need to deal with 24 hour time as well
+# date = "2018-03-27"
+# checkIn(db, workerNameTuple, actualcheckinTime, location, date)
