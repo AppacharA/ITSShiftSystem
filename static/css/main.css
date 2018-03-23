@@ -107,8 +107,9 @@ input:checked + label {
     background-color: #4CAF50;
     border: none;
     color: white;
-    padding: 15px 25px;
+    padding: 5px 15px;
     text-align: center;
+    /*font-size: 16px;*/
     font-size: 16px;
     cursor: pointer;
 }
@@ -122,7 +123,7 @@ input:checked + label {
 table {
     font-family: arial, sans-serif;
     border-collapse: collapse;
-    width: 100%;
+    width: 50%;
 }
 
 td, th {
