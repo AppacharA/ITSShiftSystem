@@ -88,7 +88,7 @@ function refreshSubRequestStatus(){
 
     //alert(shiftID)
 
-    updateSubButton(theButton, shiftID)
+    updateSubRequestButton(theButton, shiftID)
 
 
    
@@ -99,7 +99,9 @@ function refreshSubRequestStatus(){
 
 }
 
-function updateSubButton(buttonID, shiftID){//a callback function for the buttons.
+function updateSubRequestButton(buttonID, shiftID){//a callback function for the buttons. Further Reading: https://stackoverflow.com/questions/14754619/jquery-ajax-success-callback-function-definition
+  //https://stackoverflow.com/questions/11576176/wait-for-a-jquery-ajax-callback-from-calling-function
+
    
    $.get("/getSubRequestStatus", {"shiftID":shiftID}, function(data){ //If subrequest is filled, then you will need to update the button.
       //TODO: Figure out how to deal with this and JSON.
@@ -117,24 +119,22 @@ function updateSubButton(buttonID, shiftID){//a callback function for the button
 }
 
 
-function pickupDropSub(element, shiftID){
+// function pickupDropSub(element, shiftID){
  
 
 
-}
+// }
 
 
 // function refreshSubbableShifts(){
 //   //alert("hello")
-//   $('subbableShiftTable').load(); //https://stackoverflow.com/questions/42746801/jquery-to-reload-div-flask-jinja2
-
-
+//   $('subbableShiftDiv').load(); //https://stackoverflow.com/questions/42746801/jquery-to-reload-div-flask-jinja2
 
 // }
 
 function refreshSubbableShifts(){
   var Table = document.getElementById("subbableShiftTable")
-  var shiftArray = []
+  var shiftDic = [] //we will have key value pairs of the form {employeeID: [array of shiftIDS]}
   //Get all the shifts 
   //Now, we iterate through every row in the table:
   for (i = 1; i < Table.rows.length; i++){
@@ -147,12 +147,29 @@ function refreshSubbableShifts(){
     var idArray = theButton.id.split("_"); //subbableshiftbuttons have names of the form sub_shift_shiftid_emp_origEmployeeID
     var shiftID = idArray[2];
     var origEmployeeID = idArray[4]
-    shiftArray.push([shiftID, origEmployeeID]) //keep track of what shifts are in the table.
-    deleteSubbableShiftRow(Table, i, shiftID); //will check if a given shift is subbed for and if so, will delete it from the table.
+
+    if (origEmployeeID in shiftDic) {//A key for that employee exists already, with an associated array for its value.
+
+      shiftDic[origEmployeeID].push(shiftID)
+
+    }
+    else{ //A new key.
+      shiftDic.push({    https://stackoverflow.com/questions/7196212/how-to-create-dictionary-and-add-key-value-pairs-dynamically/22315575
+        key: origEmployeeID
+        value: [shiftID]
+
+
+      });
+
+    }
+
+
+    //shiftArray.push([shiftID, origEmployeeID]) //keep track of what shifts are in the table.
+    deleteSubbableShiftRow(Table, i, shiftID); //will check if a given shift is subbed for or if it's been removed, and if so, will delete it from the table.
     }
 
   //once you've hit the end of a table, it's time to see if there are any new subs that have been requested
-  findNewSubbableShifts(Table, shiftArray);
+  findNewSubbableShifts(Table, shiftDic);
 
 
 function deleteSubbableShiftRow(Table,rowindex, shiftID){
@@ -160,8 +177,9 @@ function deleteSubbableShiftRow(Table,rowindex, shiftID){
       //TODO: Figure out how to deal with this and JSON.
       
       var subFilled = data.subFilled;
-      //If a sub has been filled, we must delete the row.
-      if (subFilled == 1){
+      var subRequested = data.subRequested;
+      //If a sub has been filled or the request has been rescinded, we must delete the row.
+      if (subFilled == 1 || subRequested == 0){
         Table.deleteRow(rowindex)
       } 
      
@@ -171,26 +189,126 @@ function deleteSubbableShiftRow(Table,rowindex, shiftID){
 
 }
 
-function findNewSubbableShifts(Table, shiftArray){
+function findNewSubbableShifts(Table, shiftDic){
 //TODO/Schematic of how this works:
 //We will first do an ajax call to get all the shift ids and employeeids of all subbable shifts.
-//Then, we will compare shiftArray to that list and see what remains i.e what new shifts there are.
+//var shiftDic = {1041:[144, 146]}
+
+//alert(JSON.stringify(shiftArray))
+$.get("/getSubbableShiftIDs", function(data){
+
+    for (var i = 0; i < data.length; i++){ //https://stackoverflow.com/questions/42499535/passing-a-json-object-from-flask-to-javascript
+      var employeeID = data[i].origEmployeeID
+      var shiftID = data[i].shiftID
+      var combo = [shiftID, employeeID]
+      
+      
+      if (isIn(combo, shiftDic) == false){
+
+        alert(JSON.stringify(combo))                                        //Submit a new shiftrequest.
+
+      }
+        
+        
+      
+
+      }
+    }
+
+    
+    //Then, we will compare shiftArray to that list and see what remains i.e what new shifts there are.
 //Finally, we will iterate through the new shifts.
 //for each shift, we will submit an asynchronous call via insertNewSubbableShiftRow(), a callback function which will insert the new row.
+   
+, "json")
+}
+
+// function insertNewSubbableShiftRow(Table, shiftID, origEmployeeID){
+//   //How this will work:
+//   //submit an AJAX call to get the data from the row specified by shiftID and origEmployeeID.
+//   //Once you have the data, create a row and insert the necessary data.
+
+
+// }
+
+function pickupDropSub(theButton){
+  //Check if you're clicking to pick up a sub.
+  var idArray =  theButton.id.split("_");
+  var origEmployeeID = idArray[4]
+  var shiftID = idArray[2]
+  var subEmployeeID = 1001 //This is a placeholder, we must put it as an input eventually.
+
+  var postData = {"origEmployeeID":origEmployeeID, "subEmployeeID":subEmployeeID, "shiftID":shiftID}
+  var postData = JSON.stringify(postData)
+  
+  if (theButton.value == "pickupSub"){ //on clicking you will pick up a sub.
+    
+    //TODO: The code that actually sends the pickup request to the server.
+
+    element.innerText = "Subbing";
+
+    element.value = "dropSub" //update button value to reflect that we unrequested a sub.
+    //Consider also dropping the table that the button exists in. Or not-currently it'll be autodropped as the refreshSubbableShifts method runs.
+  }
+  else if (theButton.value == "dropSub"){
+    //TODO: The code that actually sends the pickup request to the server.
+
+    element.innerText = "Sub?";
+
+    element.value = "pickupSub" //update button value to reflect that we unrequested a sub.
+
+  }
+}
+
+
+
+function isIn(array, shiftDic){
+  //array[0] is shiftID, array[1] is employeeID
+  var employeeID = array[1];
+
+  if (employeeID in shiftDic){//If a key exists for the employee //https://stackoverflow.com/questions/1098040/checking-if-a-key-exists-in-a-javascript-object
+
+    if (shiftDic[employeeID].indexof(array[0]) != -1){
+      return true;
+
+    }
+
+    else{
+      return false;
+    }
+  }
+  
+  else{
+    return false;
+  }
 
 
 }
 
-function insertNewSubbableShiftRow(Table, shiftID, origEmployeeID){
-  //How this will work:
-  //submit an AJAX call to get the data from the row specified by shiftID and origEmployeeID.
-  //Once you have the data, create a row and insert the necessary data.
 
+// function isIn(subArray, array){
+//   for (i = 0; i < array.length; i++){ //TODO: Optimize this search.
 
-}
+        
+//         if (subArray[0] == array[i][0] && subArray[1] == array[i][1]){ // https://stackoverflow.com/questions/24943200/javascript-2d-array-indexof Why we can't use indexof...
+
+//           return true;
+//         }
+//     }
+// return false;
+// }
 
 window.onload = updateClock();
 //window.onload = enableDisableCheckin(checkedIn, checkInTime)
 window.setInterval('updateClock()', 1000)
 //window.setInterval('refreshSubRequestStatus()', 10000)
-window.setInterval('refreshSubbableShifts()', 5000)
+//window.setInterval('refreshSubbableShifts()', 5000)
+
+window.setInterval('findNewSubbableShifts()', 5000)
+
+
+//https://stackoverflow.com/questions/12693947/jquery-ajax-how-to-send-json-instead-of-querystring
+//https://stackoverflow.com/questions/6587221/send-json-data-with-jquery
+
+//https://stackoverflow.com/questions/14908864/how-can-i-use-data-posted-from-ajax-in-flask
+

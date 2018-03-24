@@ -99,6 +99,16 @@ def getSubbableShifts(db):#TODO- Modify to work based on username.       #This w
 	return subbableShifts
 	#Here's a challenge- can you inner join across all three tables to get the employeename in the results as well?
 
+def frontEndGetSubbableShifts():
+	db = MySQLdb.connect(host = "localhost",
+										   user = "Anirudh",
+										   passwd = "password",
+										   db = "test")
+	subbableShifts = getSubbableShifts(db)
+
+	return subbableShifts
+
+
 def getSubRequestableShifts(db):#TODO- MOdify to work based on username.
 	currentInfo = datetime.today()
 	#currentDate = currentInfo.strftime("%Y-%m-%d")
@@ -182,13 +192,13 @@ def getSubStatus(db, shiftID): #TODO: Make it so that it passes in username of e
 	employeeID = 1038 #This is Alexis Engel's employeeid
 
 	cursor = db.cursor()
-	query = ("SELECT subFilled FROM shiftemployeelinker WHERE employeeID = %s AND shiftID = %s")
+	query = ("SELECT subRequested, subFilled FROM shiftemployeelinker WHERE employeeID = %s AND shiftID = %s")
 	cursor.execute(query, (employeeID, shiftID))
-	result = cursor.fetchone()
-	subFilled = result[0]
+	result = cursor.fetchone() #of form (subRequested, subFilled)
+	#subFilled = result[]
 	cursor.close()
 
-	return subFilled
+	return result
 
 def getSubbableShiftInfo(db, shiftID, origEmployeeID):
 	#find and return the information of a given shift given the original employee and shiftid.
@@ -200,11 +210,41 @@ def getSubbableShiftInfo(db, shiftID, origEmployeeID):
 
 	cursor.execute(query, (shiftID, origEmployeeID))
 	result = cursor.fetchone()
-	dataList = []
+	dataList = {}
 	for elem in result:
-		datalist.append(elem)
+		datalist.update({elem[0] : elem[5]})
 
-	return dataList #this is key. We return it as a list so that we can then pass it easily to javascript.
+	return dataList #this is key. We return it as a dictionary so that we can then pass it easily to javascript.
+
+def pickupSub(db, shiftID, origEmployeeID, subEmployeeID):
+
+	cursor = db.cursor()
+	updateQuery = ("UPDATE shiftEmployeeLinker SET subFilled = TRUE "
+					"WHERE employeeID = %s AND shiftID = %s")
+	cursor.execute(updateQuery, (origEmployeeID, shiftID))
+
+	insertQuery = ("INSERT INTO subbedShifts (shiftID, origEmployeeID, subEmployeeID)"
+					"VALUES (%s, %s, %s)")
+	cursor.execute(insertQuery, (shiftID, origEmployeeID, subEmployeeID))
+
+	cursor.close()
+	db.commit()
+
+
+def dropSub(db, shiftID, origEmployeeID, subEmployeeID):
+
+	cursor = db.cursor()
+	updateQuery = ("UPDATE shiftEmployeeLinker SET subFilled = FALSE "
+					"WHERE employeeID = %s AND shiftID = %s")
+	cursor.execute(updateQuery, (origEmployeeID, shiftID))
+
+	insertQuery = ("DELETE FROM subbedShifts (shiftID, origEmployeeID, subEmployeeID)"
+					"VALUES (%s, %s, %s)")
+	cursor.execute(insertQuery, (shiftID, origEmployeeID, subEmployeeID))
+
+	cursor.close()
+	db.commit()
+
 
 
 #TODO: FIGURE OUT HOW THIS FLOW SHOULD WORK
