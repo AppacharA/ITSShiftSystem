@@ -40,24 +40,86 @@ def checkIn(db, workerNameTuple, actualCheckInTime, location, date): #TODO: Deci
 
 	cursor.close()
 
-def frontEndCheckIn():
+def checkInEmployeeID(db, employeeID, actualCheckInTime, shiftID): #TODO: Decide if you should checkin based on worker name or username. If username, how do you populate the employeeinfo with all the usernames at the getgo?
+	cursor = db.cursor()
+	
+	# #get employee info.
+	# employeeQuery = ("SELECT id FROM employeeInfo WHERE username = %s")
+	# cursor.execute(employeeQuery, username)
+	# result = cursor.fetchone()
+	# employeeID = result[0]
+
+
+	#build and execute the actual checkin Query
+	checkinQuery = ("UPDATE shiftEmployeeLinker SET checkedIn = TRUE, checkinTime = %s "
+					"WHERE employeeID = %s AND shiftID = %s")
+
+
+
+
+	try:
+		cursor.execute(checkinQuery, (actualCheckInTime, employeeID, shiftID))
+		db.commit()
+	except Exception as e:
+		print (cursor._last_executed)
+		print (e)
+
+	cursor.close()	
+
+def frontEndCheckIn(employeeID, shiftID):
+
 	workerNameTuple = ("Anirudh", "Appachar")
-	currentInfo = datetime.today()
-	currentDate = currentInfo.strftime("%Y-%m-%d")
-	checkinTime = currentInfo.strftime("%H:%M")
+	username = "appachara"
+	
 	#Figure out how to get location. Perhaps from IP? IN ANY CASE THIS IS A PLACEHOLDER.
-	location = "CMC"
+	#location = "CMC"
 	db = MySQLdb.connect(host = "localhost",
 										   user = "Anirudh",
 										   passwd = "password",
 										   db = "test")
-	checkIn(db, workerNameTuple, checkinTime, location, currentDate)
+	#getCurrentShift(db, location, currentTime, currentDate)
+	currentInfo = datetime.today()	#NOTE- This approach means that you checkin based on the server time, not hte javascript time.
+	currentDate = currentInfo.strftime("%Y-%m-%d")
+	checkinTime = currentInfo.strftime("%H:%M")
+
+	checkInEmployeeID(db, employeeID, checkinTime, shiftID)
+	#implement a successcheck..
+	return checkinTime
 	#ALSO FIGURE OUT HOW TO GET THE WORKER NAME/ USERNAME. PRESUMABLY FROM THE LOGGING IN ITSELF
 
 #TODO: FIGURE OUT HOW THIS FLOW SHOULD WORK
 #current idea: have every worker login as the same "worker" account, then just deal with checkingin via the names.
 
 
+def getCurrentShift(db, location): #Given the current time, location, you must find the shift that a worker is in in.
+	#todo- work based on username
+	#todo- Maybe make it so that you generate a datetime object within the function itself?
+	currentInfo = datetime.today()	#NOTE- This approach means that you checkin based on the server time, not hte javascript time.
+	currentDate = currentInfo.strftime("%Y-%m-%d")
+	currentTime = currentInfo.strftime("%H:%M")
+	cursor = db.cursor()
+	
+
+	#get shift info.
+	shiftQuery = ("SELECT id FROM shiftList WHERE checkinTime <= %s AND location = %s AND Date = %s "
+					"ORDER BY id DESC LIMIT 1")
+	cursor.execute(shiftQuery, (currentTime, location, currentDate))
+	#print (cursor._last_executed)
+	result = cursor.fetchone()
+	cursor.close()
+	shiftID = result[0]
+
+	return shiftID
+
+def getCurrentEmployee(db, username):
+	cursor = db.cursor()
+	print (username)
+	cursor.execute("SELECT id from employeeInfo WHERE username = %s", (username,))
+	result = cursor.fetchone()
+	cursor.close()
+	employeeID = result[0]
+
+	return employeeID
 
 def getSubbableShifts(db):#TODO- Modify to work based on username.       #This will get the list of shifts that are in the future that you can request subs for.
 	currentInfo = datetime.today()
@@ -246,14 +308,18 @@ def dropSub(db, shiftID, origEmployeeID, subEmployeeID):
 	db.commit()
 
 
-
+def main():
 #TODO: FIGURE OUT HOW THIS FLOW SHOULD WORK
 #current idea: have every worker login as the same "worker" account, then just deal with checkingin via the names.
-# db = MySQLdb.connect(host = "localhost",
-#                                               user = "Anirudh",
-#                                               passwd = "password",
-#                                               db = "test")
+	db = MySQLdb.connect(host = "localhost",
+                                              user = "Anirudh",
+                                              passwd = "password",
+                                              db = "test")
 
+
+	shiftID = getCurrentShift(db, "CMC")
+
+	print (shiftID)
 
 # #time to test!
 # workerNameTuple = ("Anirudh", "Appachar")
@@ -261,3 +327,8 @@ def dropSub(db, shiftID, origEmployeeID, subEmployeeID):
 # actualcheckinTime = "13:15" #NOTE  You'll need to deal with 24 hour time as well
 # date = "2018-03-27"
 # checkIn(db, workerNameTuple, actualcheckinTime, location, date)
+
+
+if __name__ == "__main__":
+	main()
+

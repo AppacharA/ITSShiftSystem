@@ -10,10 +10,12 @@ def getListOfWorkers(workbook):
 	#Get list of all the workers from the ITS Schedule
 	workerList = []
 	staffNumber = staffSheet.max_row #subtract 1 to get actual number of workers, because the first row will always be the column headers for titles and whatnot.
-	for row in range(2, staffNumber): #for every worker (range must go to staffNumber+1 because )
+	for row in range(2, staffNumber+1): #for every worker (range must go to staffNumber+1 because )
 		firstName = staffSheet.cell(row = row, column = 1).value
 		lastName = staffSheet.cell(row = row, column = 2).value
-		workerList.append((firstName, lastName))
+		username = staffSheet.cell(row = row, column = 5).value
+
+		workerList.append((firstName, (lastName, username)))
 	listofWorkers = dict(workerList) #workerList is a tuple; we're making a dictionary out of it.
 
 	return listofWorkers
@@ -30,19 +32,30 @@ def getStudent(workerList, workerName): #given the student name in a cell, finds
 	if workerName == "": #Skips blank cells.
 		return ""
 	else:
-		lastName = workerList.get(workerName)
+		info = workerList.get(workerName) #info is a tuple of form (lastname, username)
 		firstName = workerName
+		lastName = info[0]
+		username = info[1]
+
 		if firstName == "Sophia M." or firstName == "Sophia B.": #Built in Sophia Processing!
 			firstName = "Sophia"
 		# student = firstName + " " + lastName
 		# return student
 
-		return (firstName, lastName)
+		return (firstName, lastName, username)
 
-def getDay(col): #returns Day as string from the excel spreadsheet. This might actually be a redundant method but hey, it works!
+def getDay(row, col): #returns Day as string from the excel spreadsheet. This might actually be a redundant method but hey, it works!
 
+	
 	Daynumber = ceil(col/2)
+	
+	#now check if you're at midnight on Sunday
+	if (col == 14 and row >= 51):
+		Daynumber = 1 #roll over to Monday
 
+	elif (col % 2 == 0 and col >= 48):
+		Daynumber += 1 
+	
 	if Daynumber == 1:
 		Day = "Monday"
 	elif Daynumber == 2:

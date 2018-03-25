@@ -123,16 +123,35 @@ input:checked + label {
 table {
     font-family: arial, sans-serif;
     border-collapse: collapse;
-    width: 50%;
+    table-layout: fixed;
+    width:100%;
+    
+    
+}
+
+.dyn-height {
+    max-height:290px;
+    overflow-y:auto;
+    
+    
 }
 
 td, th {
     border: 1px solid #dddddd;
     text-align: left;
     padding: 8px;
+    
 }
+
+caption{
+  font-weight: bold;
+  font-size: 20px;
+}
+
 
 tr:nth-child(even) {
     background-color: #dddddd;
 }
+
+
 

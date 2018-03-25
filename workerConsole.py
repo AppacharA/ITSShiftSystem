@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, jsonify
 import json
 import MySQLdb
-from workerFunctions import frontEndCheckIn, getSubRequestableShifts, frontEndGetSubbableShifts, frontEndRequestSub, frontEndUnrequestSub
+from workerFunctions import frontEndCheckIn, getSubRequestableShifts, frontEndGetSubbableShifts, frontEndRequestSub, frontEndUnrequestSub, getCurrentShift, getCurrentEmployee
 import workerFunctions
 app = Flask(__name__)
 
@@ -22,25 +22,35 @@ def main():
 						 passwd = "password",
 						 db = "test")
 
+	#when you have an authenticated user, make sure to replace this line with their username.
+	username = "appachara"
+	location = "CMC" #Placeholder
+	currentShiftID = getCurrentShift(db, location)
+	employeeID = getCurrentEmployee(db, username)
+	print (currentShiftID)
+	print (employeeID)
+	#TODO -implement check for if there is no employee or shift at this time.
 	cur = db.cursor()
-	cur.execute("SELECT checkintime FROM shiftemployeelinker WHERE employeeid = 1001 ORDER BY shiftId DESC LIMIT 1")
+	# cur.execute("SELECT checkintime FROM shiftemployeelinker WHERE employeeid = 1001 ORDER BY shiftId DESC LIMIT 1")
+
+	cur.execute("SELECT checkintime from shiftemployeelinker WHERE employeeID = %s AND shiftID = %s", (employeeID, currentShiftID))
 	result = cur.fetchone()
 	cur.close()
+
 	subRequestableShifts = getSubRequestableShifts(db)
 	subbableShifts = frontEndGetSubbableShifts()#getSubbableShifts(db)
 	print (len(subbableShifts))
 	db.close()
 	#check if the user is already checked in for this shift.
 	
+	#will need to implement check for thos etimes when it doesn't even find a result. 
 	if result[0] != None:
 		checkedIn = True
 		checkInTime = result[0]
 
-	loggedInEmployeeID = 1038
+	#loggedInEmployeeID = 1038
 
-	print (checkedIn)
-	print (len(subRequestableShifts))
-	return render_template('workerConsole.html', data = (checkedIn, checkInTime), subRequestableShifts = subRequestableShifts, subbableShifts = subbableShifts, employeeID = loggedInEmployeeID)
+	return render_template('workerConsole.html', data = (checkedIn, checkInTime), subRequestableShifts = subRequestableShifts, subbableShifts = subbableShifts, employeeID = employeeID, shiftID = currentShiftID)
 
 # #rendering the HTML page which has the button
 # @app.route('/json')
@@ -49,13 +59,16 @@ def main():
 
 #background process happening without any refreshing
 @app.route('/checkin', methods = ['POST'])
-def background_process_test():
+def checkIn():
 	
+	employeeID = request.form['employeeID']
+	shiftID = request.form['shiftID']
 	print ("Hello")
-	frontEndCheckIn()
+	checkInTime = frontEndCheckIn(employeeID, shiftID)
 
 
-	return ("nothing")
+	return jsonify({"checkInTime":checkInTime})
+	
 
 @app.route('/requestSub', methods = ['POST'])
 def requestSub():
@@ -73,7 +86,7 @@ def unrequestSub():
 
 	return ("nothing")
 
-@app.route('pickupSub', methods = ['POST'])
+@app.route('/pickupSub', methods = ['POST'])
 def frontEndPickupSub():
 	db = MySQLdb.connect(host = "localhost",
 										   user = "Anirudh",
@@ -90,7 +103,7 @@ def frontEndPickupSub():
 	return ("nothing")
 
 
-@app.route('dropSub', methods = ['POST'])
+@app.route('/dropSub', methods = ['POST'])
 def frontEndDropSub():
 	db = MySQLdb.connect(host = "localhost",
 										   user = "Anirudh",

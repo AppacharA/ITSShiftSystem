@@ -28,18 +28,28 @@ function sayHello(input){
   //alert(element.id)
 }
 
-// function sayHello(input){
-// 	alert (input)
-// }
-function checkIn(){ //A function to check in a worker.
-  //checkInTime = getCurrentTime(); //Get current time.
 
-  $.post("/checkin") //This goes and uses AJAX to post to the server and call the python method frontendcheckin()
+function checkIn(employeeID, shiftID){ //A function to check in a worker.
 
   
-  //Next, we wish to disable the button.
-  document.getElementById("checkinButton").disabled = true;    
-  document.getElementById("checkinButton").innerText = "Already Checked In!"
+  var theButton = document.getElementById("checkinButton")
+  //First, disable the button.
+  theButton.disabled = true;    
+  theButton.innerText = "Checking you in..";
+
+  // console.log(employeeID)
+  // console.log(shiftID)
+
+    checkinData = {"employeeID": employeeID, "shiftID": shiftID}
+    $.post("/checkin", checkinData, function(data){
+    
+    //Assuming the checkin Succeeds.
+    theButton.innerText = "Checked In " + data.checkInTime
+
+  } ) //This goes and uses AJAX to post to the server and call the python method frontendcheckin()
+
+  
+
 }
 
 // //This code is to ensure that the button remains disabled even upon page refresh.
@@ -119,18 +129,18 @@ function updateSubRequestButton(buttonID, shiftID){//a callback function for the
 }
 
 
-// function pickupDropSub(element, shiftID){
+function pickupDropSub(element, shiftID){
  
 
 
-// }
+}
 
+/*
+function refreshSubbableShifts(){
+  //alert("hello")
+  $('subbableShiftDiv').load(); //https://stackoverflow.com/questions/42746801/jquery-to-reload-div-flask-jinja2
 
-// function refreshSubbableShifts(){
-//   //alert("hello")
-//   $('subbableShiftDiv').load(); //https://stackoverflow.com/questions/42746801/jquery-to-reload-div-flask-jinja2
-
-// }
+}*/
 
 function refreshSubbableShifts(){
   var Table = document.getElementById("subbableShiftTable")
@@ -154,8 +164,8 @@ function refreshSubbableShifts(){
 
     }
     else{ //A new key.
-      shiftDic.push({    https://stackoverflow.com/questions/7196212/how-to-create-dictionary-and-add-key-value-pairs-dynamically/22315575
-        key: origEmployeeID
+      shiftDic.push({    //https://stackoverflow.com/questions/7196212/how-to-create-dictionary-and-add-key-value-pairs-dynamically/22315575
+        key: origEmployeeID ,
         value: [shiftID]
 
 
@@ -171,6 +181,7 @@ function refreshSubbableShifts(){
   //once you've hit the end of a table, it's time to see if there are any new subs that have been requested
   findNewSubbableShifts(Table, shiftDic);
 
+}
 
 function deleteSubbableShiftRow(Table,rowindex, shiftID){
   $.get("/getSubRequestStatus", {"shiftID":shiftID}, function(data){ //If sub is filled, then we will delete the row that it originally came from.
@@ -221,17 +232,18 @@ $.get("/getSubbableShiftIDs", function(data){
 //for each shift, we will submit an asynchronous call via insertNewSubbableShiftRow(), a callback function which will insert the new row.
    
 , "json")
+
 }
 
-// function insertNewSubbableShiftRow(Table, shiftID, origEmployeeID){
-//   //How this will work:
-//   //submit an AJAX call to get the data from the row specified by shiftID and origEmployeeID.
-//   //Once you have the data, create a row and insert the necessary data.
+function insertNewSubbableShiftRow(Table, shiftID, origEmployeeID){
+  //How this will work:
+  //submit an AJAX call to get the data from the row specified by shiftID and origEmployeeID.
+  //Once you have the data, create a row and insert the necessary data.
 
 
-// }
+}
 
-function pickupDropSub(theButton){
+function pickupDropSub(Table, rowIndex,theButton){
   //Check if you're clicking to pick up a sub.
   var idArray =  theButton.id.split("_");
   var origEmployeeID = idArray[4]
@@ -243,6 +255,7 @@ function pickupDropSub(theButton){
   
   if (theButton.value == "pickupSub"){ //on clicking you will pick up a sub.
     
+    $.post('/pickupSub', postData)
     //TODO: The code that actually sends the pickup request to the server.
 
     element.innerText = "Subbing";
@@ -251,6 +264,8 @@ function pickupDropSub(theButton){
     //Consider also dropping the table that the button exists in. Or not-currently it'll be autodropped as the refreshSubbableShifts method runs.
   }
   else if (theButton.value == "dropSub"){
+      
+    $.post('/dropSub', postData)
     //TODO: The code that actually sends the pickup request to the server.
 
     element.innerText = "Sub?";
@@ -258,6 +273,10 @@ function pickupDropSub(theButton){
     element.value = "pickupSub" //update button value to reflect that we unrequested a sub.
 
   }
+
+  //Once all is said and done, you will drop the row from the table. The reason is simple: if you are picking up a sub, then the row is in the subbableshifts table, and you must drop the row to prevent the user from clicking it again.
+  //If you are dropping a sub, then you have a row in the subbingShifts table that you must drop because you are no longer subbing it.
+  Table.dropRow(rowIndex);
 }
 
 
@@ -286,6 +305,7 @@ function isIn(array, shiftDic){
 }
 
 
+
 // function isIn(subArray, array){
 //   for (i = 0; i < array.length; i++){ //TODO: Optimize this search.
 
@@ -304,7 +324,7 @@ window.setInterval('updateClock()', 1000)
 //window.setInterval('refreshSubRequestStatus()', 10000)
 //window.setInterval('refreshSubbableShifts()', 5000)
 
-window.setInterval('findNewSubbableShifts()', 5000)
+//window.setInterval('findNewSubbableShifts()', 5000)
 
 
 //https://stackoverflow.com/questions/12693947/jquery-ajax-how-to-send-json-instead-of-querystring
