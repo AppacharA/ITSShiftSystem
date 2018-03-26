@@ -30,7 +30,7 @@ p {
 
 main {
   min-width: 320px;
-  max-width: 800px;
+  max-width: 1000px;
   padding: 50px;
   margin: 0 auto;
   background: #fff;
@@ -40,6 +40,7 @@ section {
   display: none;
   padding: 20px 0 0;
   border-top: 1px solid #ddd;
+  
 }
 
 input {
@@ -62,10 +63,11 @@ label:before {
   margin-right: 10px;
 }
 
-label[for*='1']:before { content: '\f1cb'; }
-label[for*='2']:before { content: '\f17d'; }
-label[for*='3']:before { content: '\f16b'; }
-label[for*='4']:before { content: '\f1a9'; }
+label[for*='1']:before { content: '\f017'; } /* http://astronautweb.co/snippet/font-awesome/ */
+label[for*='2']:before { content: '\f00b'; }
+label[for*='3']:before { content: '\f073'; }
+label[for*='4']:before { content: '\f007'; }
+label[for*='5']:before { content: '\f0c0\f073'; }
 
 label:hover {
   color: #888;
@@ -82,9 +84,13 @@ input:checked + label {
 #tab1:checked ~ #content1,
 #tab2:checked ~ #content2,
 #tab3:checked ~ #content3,
-#tab4:checked ~ #content4 {
+#tab4:checked ~ #content4, 
+#tab5:checked ~ #content5 {
   display: block;
 }
+
+
+
 
 @media screen and (max-width: 650px) {
   label {
@@ -130,7 +136,7 @@ table {
 }
 
 .dyn-height {
-    max-height:290px;
+    max-height:500px;
     overflow-y:auto;
     
     

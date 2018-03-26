@@ -91,23 +91,34 @@ def frontEndCheckIn(employeeID, shiftID):
 #current idea: have every worker login as the same "worker" account, then just deal with checkingin via the names.
 
 
-def getCurrentShift(db, location): #Given the current time, location, you must find the shift that a worker is in in.
+def getCurrentShift(db, location, employeeID): #Given the current time, location, and ID you must find the shift that a worker is in in.
 	#todo- work based on username
 	#todo- Maybe make it so that you generate a datetime object within the function itself?
 	currentInfo = datetime.today()	#NOTE- This approach means that you checkin based on the server time, not hte javascript time.
 	currentDate = currentInfo.strftime("%Y-%m-%d")
 	currentTime = currentInfo.strftime("%H:%M")
 	cursor = db.cursor()
+	# currentDate = "2018/03/26"
+	# currentTime = "08:00"
 	
 
 	#get shift info.
-	shiftQuery = ("SELECT id FROM shiftList WHERE checkinTime <= %s AND location = %s AND Date = %s "
+	shiftQuery = ("SELECT shiftid FROM shiftEmployeeLinker "
+					"INNER JOIN shiftlist "
+					"ON shiftlist.id = shiftEmployeeLinker.shiftid "
+					"WHERE (shiftlist.checkinTime <= %s AND Date = %s AND employeeID = %s) "
+					
 					"ORDER BY id DESC LIMIT 1")
-	cursor.execute(shiftQuery, (currentTime, location, currentDate))
-	#print (cursor._last_executed)
+	cursor.execute(shiftQuery, (currentTime, currentDate, employeeID))
+	print (location)
+	print (cursor._last_executed)
 	result = cursor.fetchone()
 	cursor.close()
-	shiftID = result[0]
+	#db.close()
+	if result:
+		shiftID = result[0]
+	else:
+		shiftID = None
 
 	return shiftID
 
@@ -115,13 +126,15 @@ def getCurrentEmployee(db, username):
 	cursor = db.cursor()
 	print (username)
 	cursor.execute("SELECT id from employeeInfo WHERE username = %s", (username,))
+
 	result = cursor.fetchone()
 	cursor.close()
+	#db.close()
 	employeeID = result[0]
 
 	return employeeID
 
-def getSubbableShifts(db):#TODO- Modify to work based on username.       #This will get the list of shifts that are in the future that you can request subs for.
+def getSubbableShifts(db):#TODO- Modify to work based on username.       #This will get the list of shifts that are in the future that you can sub for.
 	currentInfo = datetime.today()
 	#currentDate = currentInfo.strftime("%Y-%m-%d")
 	#currentTime = currentInfo.strftime("%H:%M")
@@ -131,15 +144,13 @@ def getSubbableShifts(db):#TODO- Modify to work based on username.       #This w
 
 	#first get employeeid
 	cursor = db.cursor()
-	shiftQuery = ("SELECT id from employeeinfo where firstName = %s and lastName = %s")
-	cursor.execute(shiftQuery, workerNameTuple)
-	result = cursor.fetchone()
-	employeeID = result[0]
-
-	#next get all shifts in the future that have an unfulfilled sub request in and that are not the employee's own shifts.
-	subQuery = ("SELECT shiftlist.id, shiftlist.checkinTime, shiftlist.location, shiftlist.date, shiftlist.day, shiftEmployeeLinker.employeeid FROM ShiftList "
+	
+	#next get all shifts in the future that have an unfulfilled sub request in and (eventually? that are not the employee's own shifts.)
+	subQuery = ("SELECT shiftlist.id, shiftlist.checkinTime, shiftlist.location, shiftlist.date, shiftlist.day, shiftEmployeeLinker.employeeid, employeeInfo.firstName, employeeInfo.lastname FROM ShiftList "
 						"INNER JOIN ShiftEmployeeLinker "
 						"ON ShiftList.id = ShiftEmployeeLinker.shiftID "
+						"INNER JOIN employeeInfo "
+						"ON ShiftEmployeeLinker.employeeID = employeeInfo.id "
 						"WHERE ShiftEmployeeLinker.subRequested = TRUE "
 						"AND NOT EXISTS "
 							"(SELECT 1 from subbedShifts WHERE subbedShifts.shiftID = shiftEmployeeLinker.shiftID and subbedShifts.origEmployeeID = shiftEmployeeLinker.employeeID) "
@@ -158,6 +169,7 @@ def getSubbableShifts(db):#TODO- Modify to work based on username.       #This w
 	  print (e)
 	  print (cursor._last_executed)
 	subbableShifts = cursor.fetchall()
+	cursor.close()
 	return subbableShifts
 	#Here's a challenge- can you inner join across all three tables to get the employeename in the results as well?
 
@@ -171,20 +183,42 @@ def frontEndGetSubbableShifts():
 	return subbableShifts
 
 
-def getSubRequestableShifts(db):#TODO- MOdify to work based on username.
-	currentInfo = datetime.today()
-	#currentDate = currentInfo.strftime("%Y-%m-%d")
-	#currentTime = currentInfo.strftime("%H:%M")
-	currentDate = "2018/03/26"
-	currentTime = "18:30"
-	workerNameTuple = ("Alexis", "Engel")
-
-	#first get employeeid
+def getSubbingShifts(db, employeeID):
 	cursor = db.cursor()
-	shiftQuery = ("SELECT id from employeeinfo where firstName = %s and lastName = %s")
-	cursor.execute(shiftQuery, workerNameTuple)
-	result = cursor.fetchone()
-	employeeID = result[0]
+
+	theNow = datetime.now() #Note: This line means that this method currently gets shifts based on server time, not frontend time.
+	currentTime = theNow.strftime("%H:%M")
+	currentDate = theNow.strftime("%Y/%m/%d")
+	#want to get all shifts that user is subbing for in the future.
+	subQuery = subQuery = ("SELECT shiftlist.id, shiftlist.checkinTime, shiftlist.location, shiftlist.date, shiftlist.day, employeeInfo.id, employeeInfo.firstName, employeeInfo.lastname FROM ShiftList "
+						"INNER JOIN subbedShifts "
+						"ON ShiftList.id = subbedShifts.shiftID "
+						"INNER JOIN employeeInfo "
+						"ON subbedShifts.origEmployeeID = employeeInfo.id "
+						"WHERE (subbedShifts.subEmployeeID = %s "
+						"AND (ShiftList.date = %s AND ShiftList.checkinTime > %s) )"
+						"OR (subbedShifts.subEmployeeID = %s AND ShiftList.date > %s)")
+
+	cursor.execute(subQuery, (employeeID, currentDate, currentTime, employeeID, currentDate))
+	subbingShifts = cursor.fetchall()
+
+	cursor.close()
+
+	return subbingShifts
+
+def getSubRequestableShifts(db, employeeID):#TODO- MOdify to work based on employeeID
+	currentInfo = datetime.today()
+	currentDate = currentInfo.strftime("%Y-%m-%d")
+	currentTime = currentInfo.strftime("%H:%M")
+	
+	# workerNameTuple = ("Alexis", "Engel")
+
+	# #first get employeeid
+	cursor = db.cursor()
+	# shiftQuery = ("SELECT id from employeeinfo where firstName = %s and lastName = %s")
+	# cursor.execute(shiftQuery, workerNameTuple)
+	# result = cursor.fetchone()
+	# employeeID = result[0]
 
 	#next get all possible shifts in the future that the employee can stake using inner join
 	subQuery = ("SELECT shiftlist.id, shiftlist.checkinTime, shiftlist.location, shiftlist.date, shiftlist.day, shiftemployeelinker.subRequested FROM ShiftList "
@@ -200,6 +234,8 @@ def getSubRequestableShifts(db):#TODO- MOdify to work based on username.
 	  print (e)
 	  print (cursor._last_executed)
 	subRequestableShifts = cursor.fetchall()
+	cursor.close()
+
 	return subRequestableShifts
 
 def requestSub(db, employeeID, shiftID):
@@ -210,21 +246,21 @@ def requestSub(db, employeeID, shiftID):
 	db.commit()
 	return
 
-def frontEndRequestSub(shiftID): #TODO- Modify to work with a username
-	workerNameTuple = ("Alexis", "Engel")
+def frontEndRequestSub(shiftID, employeeID): #TODO- Modify to work with a username
+	#workerNameTuple = ("Alexis", "Engel")
 	db = MySQLdb.connect(host = "localhost",
 										   user = "Anirudh",
 										   passwd = "password",
 										   db = "test")
 	cursor = db.cursor();
 	#get employeeID
-	query = ("SELECT id FROM employeeinfo WHERE firstName = %s AND lastName = %s")
-	cursor.execute(query, workerNameTuple)
-	result = cursor.fetchone()
-	employeeID = result[0]
+	# query = ("SELECT id FROM employeeinfo WHERE firstName = %s AND lastName = %s")
+	# cursor.execute(query, workerNameTuple)
+	# result = cursor.fetchone()
+	# employeeID = result[0]
 	requestSub(db, employeeID, shiftID)
 	cursor.close()
-	db.close()
+	#db.close()
 
 def unrequestSub(db, employeeID, shiftID):
 	cursor = db.cursor()
@@ -234,25 +270,26 @@ def unrequestSub(db, employeeID, shiftID):
 	db.commit()
 	return
 
-def frontEndUnrequestSub(shiftID): #TODO- Modify to work with a username
-	workerNameTuple = ("Alexis", "Engel")
+def frontEndUnrequestSub(shiftID, employeeID): #TODO- Modify to work with a username
+	# workerNameTuple = ("Alexis", "Engel")
 	db = MySQLdb.connect(host = "localhost",
 										   user = "Anirudh",
 										   passwd = "password",
 										   db = "test")
 	cursor = db.cursor();
 	#get employeeID
-	query = ("SELECT id FROM employeeinfo WHERE firstName = %s AND lastName = %s")
-	cursor.execute(query, workerNameTuple)
-	result = cursor.fetchone()
-	employeeID = result[0]
+	# query = ("SELECT id FROM employeeinfo WHERE firstName = %s AND lastName = %s")
+	# cursor.execute(query, workerNameTuple)
+	# result = cursor.fetchone()
+	# employeeID = result[0]
+
 	unrequestSub(db, employeeID, shiftID)
 	cursor.close()
-	db.close()
+	#db.close()
 
-def getSubStatus(db, shiftID): #TODO: Make it so that it passes in username of employee as well.
-	employeeID = 1038 #This is Alexis Engel's employeeid
-
+def getSubStatus(db, shiftID, employeeID): #TODO: Make it so that it passes in username of employee as well.
+	#employeeID = 1038 #This is Alexis Engel's employeeid
+	
 	cursor = db.cursor()
 	query = ("SELECT subRequested, subFilled FROM shiftemployeelinker WHERE employeeID = %s AND shiftID = %s")
 	cursor.execute(query, (employeeID, shiftID))
@@ -262,21 +299,6 @@ def getSubStatus(db, shiftID): #TODO: Make it so that it passes in username of e
 
 	return result
 
-def getSubbableShiftInfo(db, shiftID, origEmployeeID):
-	#find and return the information of a given shift given the original employee and shiftid.
-	cursor = db.cursor()
-	query = ("SELECT shiftlist.id, shiftlist.checkinTime, shiftlist.location, shiftlist.date, shiftlist.day, shiftEmployeeLinker.employeeid FROM ShiftList "
-						"INNER JOIN ShiftEmployeeLinker "
-						"ON ShiftList.id = ShiftEmployeeLinker.shiftID "
-						"WHERE ShiftEmployeeLinker.shiftID = %s AND shiftEmployeeLinker.employeeID = %s")
-
-	cursor.execute(query, (shiftID, origEmployeeID))
-	result = cursor.fetchone()
-	dataList = {}
-	for elem in result:
-		datalist.update({elem[0] : elem[5]})
-
-	return dataList #this is key. We return it as a dictionary so that we can then pass it easily to javascript.
 
 def pickupSub(db, shiftID, origEmployeeID, subEmployeeID):
 
@@ -293,19 +315,37 @@ def pickupSub(db, shiftID, origEmployeeID, subEmployeeID):
 	db.commit()
 
 
-def dropSub(db, shiftID, origEmployeeID, subEmployeeID):
+def dropSub(db, shiftID, origEmployeeID):
 
 	cursor = db.cursor()
 	updateQuery = ("UPDATE shiftEmployeeLinker SET subFilled = FALSE "
 					"WHERE employeeID = %s AND shiftID = %s")
+	
 	cursor.execute(updateQuery, (origEmployeeID, shiftID))
 
-	insertQuery = ("DELETE FROM subbedShifts (shiftID, origEmployeeID, subEmployeeID)"
-					"VALUES (%s, %s, %s)")
-	cursor.execute(insertQuery, (shiftID, origEmployeeID, subEmployeeID))
+	try:
+		delQuery = ("DELETE FROM subbedShifts "
+				"WHERE shiftID = %s AND origEmployeeID= %s")
+				
+		cursor.execute(delQuery, (shiftID, origEmployeeID))
 
+	except:
+		print(cursor._last_executed )
 	cursor.close()
 	db.commit()
+
+def getShiftID(db, shiftID, employeeID):
+	subQuery = ("SELECT shiftlist.checkinTime, shiftlist.location, shiftlist.date, shiftlist.day, shiftEmployeeLinker.subRequested, shiftEmployeeLinker.subFilled FROM ShiftList "
+						"INNER JOIN ShiftEmployeeLinker "
+						"ON ShiftList.id = ShiftEmployeeLinker.shiftID "
+						"WHERE (ShiftEmployeeLinker.employeeID = %s "
+						"AND shiftemployeelinker.shiftid = %s)")
+
+	cursor = db.cursor()
+
+	cursor.execute(subQuery, (employeeID, shiftID))
+
+	return (cursor.fetchone())
 
 
 def main():
@@ -317,9 +357,9 @@ def main():
                                               db = "test")
 
 
-	shiftID = getCurrentShift(db, "CMC")
+	#shiftID = getCurrentShift(db, "CMC")
 
-	print (shiftID)
+	#print (shiftID)
 
 # #time to test!
 # workerNameTuple = ("Anirudh", "Appachar")

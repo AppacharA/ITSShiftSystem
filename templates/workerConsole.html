@@ -15,35 +15,63 @@
   <input id="tab2" type="radio" name="tabs">
   <label for="tab2">Lab Rounds</label>
     
+  <input id="tab3" type = "radio" name="tabs">
+  <label for="tab3">All Shifts</label>
   
+  <input id="tab4" type="radio" name="tabs" onclick = "populateTable()" >
+  <label for="tab4">Sub Requests</label>
+
+  <input id="tab5" type="radio" name="tabs">
+  <label for="tab5">Shift Calendar</label>
+
   
-  <input id="tab3" type="radio" name="tabs" onclick = "populateTable()" >
-  <label for="tab3">Sub Requests</label>
-
-
-
-    
-  <input id="tab4" type="radio" name="tabs">
-  <label for="tab4">Shift Calendar</label>
     
   <section id="content1"> <!--For this one you want a clock and the checkin button -->
-    <p>
-      Bacon ipsum dolor sit amet beef venison beef ribs kielbasa. Sausage pig leberkas, t-bone sirloin shoulder bresaola. Frankfurter rump porchetta ham. Pork belly prosciutto brisket meatloaf short ribs.
-    </p>
+    
    
-
+   <p>
+     You currently have a shift in {{shiftInfo[1]}} that starts at {{shiftInfo[0]}} 
+     <br/>
+     You are currently in {{location}}
+   </p>
     <p>
+  <table id = "upcomingShifts" >
+          <caption style="font-size: 16px; font-weight: bold;">Your Upcoming Shifts</caption>
+          <tr> <!-- defining the table headers... -->
+          <th>Time</th>
+          <th>Location</th>
+          <th>Date</th>
+          <th>Day</th>
+          </tr> 
 
-    <span id = "checkinClock">&nbsp;</span>
+      {% for i in range (1, 6) %}
+      <!-- each row is a tuple containing the following info: (shiftid, time, location, date, day, subRequested)-->
+      <tr>
+        <td>{{subRequestableShifts[i][1]}}</td>
+        <td>{{subRequestableShifts[i][2]}}</td>
+        <td>{{subRequestableShifts[i][3]}}</td>
+        <td>{{subRequestableShifts[i][4]}}</td>
+      </tr>
+      {% endfor %}
+
+
+        </table>
+    </p>
+
+
+    
+    
+    <span id = "checkinClock" style="font-size: 16px;">&nbsp;</span>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
     <script src = "{{url_for('static', filename='js/workerConsole.js')}}"></script> <!-- why does this only work when the script is placed after the variable is initialized -->
-    </p>
-     
+     </p>
    
     <!-- We want to disable the button and display check in time if the user has already checked in.-->
      
-
     <!-- disable the button if he's already checked in for a shift. -->
+    <p>
+    {%if shiftID != None %}
+
     <button class="button" id="checkinButton" onclick = "checkIn({{employeeID}}, {{shiftID}})"  
     {% if data[0] == True %} 
 
@@ -54,9 +82,27 @@
     enabled > Check-In
 
     {%endif%}
+
     </button> 
 
+    {%else%}
+
+    <button class="button" id="checkinButton">No Shift</button>
+
+    {%endif%}
+    </p>
+
+    <div>
+      <p>Not where you ought to be? Have no fear!</p>
+      <input type="radio" name="location" id="cmcRadio" value = "CMC" onclick = "switchLocation(this)">
+      <label for="cmcRadio">CMC</label>
+
+      <input type="radio" name="location" id="RITRadio" value = "ResearchIT" onclick = "switchLocation(this)">
+      <label for="RITRadio">The Libe</label>
+    </div>
     
+      
+
 
 
     <!-- <script>     
@@ -69,7 +115,7 @@
   
   </section>
     
-  <section id="content2"> <!--For this one you want sub requests -->
+  <section id="content2">
     <p>
       Bacon ipsum dolor sit amet landjaeger sausage brisket, jerky drumstick fatback boudin ball tip turducken. Pork belly meatball t-bone bresaola tail filet mignon kevin turkey ribeye shank flank doner cow kielbasa shankle. Pig swine chicken hamburger, tenderloin turkey rump ball tip sirloin frankfurter meatloaf boudin brisket ham hock. Hamburger venison brisket tri-tip andouille pork belly ball tip short ribs biltong meatball chuck. Pork chop ribeye tail short ribs, beef hamburger meatball kielbasa rump corned beef porchetta landjaeger flank. Doner rump frankfurter meatball meatloaf, cow kevin pork pork loin venison fatback spare ribs salami beef ribs.
     </p>
@@ -77,9 +123,9 @@
       Jerky jowl pork chop tongue, kielbasa shank venison. Capicola shank pig ribeye leberkas filet mignon brisket beef kevin tenderloin porchetta. Capicola fatback venison shank kielbasa, drumstick ribeye landjaeger beef kevin tail meatball pastrami prosciutto pancetta. Tail kevin spare ribs ground round ham ham hock brisket shoulder. Corned beef tri-tip leberkas flank sausage ham hock filet mignon beef ribs pancetta turkey.
     </p>
   </section>
-    
-  <section id="content3"> <!--For this one you want the sub requests -->
-    <p style= "font-weight: bold; font-size: 18px">Your Upcoming Shifts</p>
+
+  <section id="content3">
+    <p style= "font-weight: bold; font-size: 18px">All Shifts</p>
     <div class = dyn-height id= "subRequestableShiftDiv">
     <table  id = "subRequestableShiftTable">
      
@@ -88,7 +134,7 @@
         <th>Location</th>
         <th>Date</th>
         <th>Day</th>
-        <th>?!?!?!?</th>
+        <th>What are you looking at me for</th>
       </tr> 
    
     {% for row in subRequestableShifts %} <!-- row is a tuple containing the following info: (shiftid, time, location, date, day, subRequested)-->
@@ -98,9 +144,9 @@
       <td>{{row[3]}}</td>
       <td>{{row[4]}}</td>
       {% if row[5] == False %} <!-- if the shift has not been sub requested -->
-      <td><button class="button" id = "subButton {{row[0]}}" value = "subUnrequested" onclick = "requestUnrequestSub(this, '{{row[0]}}')" >Request Sub</button> </td> <!-- you can pass the direct shiftid this is amazing!-->
+      <td><button class="button" id = "subRequestButton {{row[0]}}" value = "subUnrequested" onclick = "requestUnrequestSub(this, '{{row[0]}}', '{{employeeID}}')" >Request Sub</button> </td> <!-- you can pass the direct shiftid this is amazing!-->
       {% else %}
-      <td><button class="button" id = "subButton {{row[0]}}" value = "subRequested" onclick = "requestUnrequestSub(this, '{{row[0]}}')">Unrequest Sub</button> </td>
+      <td><button class="button" id = "subRequestButton {{row[0]}}" value = "subRequested" style = "background-color: #cc0000;" onclick = "requestUnrequestSub(this, '{{row[0]}}', '{{employeeID}}')">Unrequest Sub</button> </td>
       {%endif%}
     </tr>
     
@@ -108,30 +154,43 @@
     
     </table>
     </div>
+  </section>
+    
+  <section id="content4"> <!--For this one you want the sub requests -->
+    
     <p style= "font-weight: bold; font-size: 18px">Open Sub Requests</p>
     <div class = dyn-height id = "subbableShiftDiv">
-      <table style = "width:50%" id = "subbableShiftTable">
+      <table style = "width:100%" id = "subbableShiftTable">
         <tr> <!-- defining the table headers... -->
         <th>Time</th>
         <th>Location</th>
         <th>Date</th>
         <th>Day</th>
+        <th>Employee</th>
         <th>?!?!?!?</th>
       </tr> 
-      {% for row in subbableShifts %} <!-- row is a tuple containing the following info: (shiftid, time, location, date, day, original employee id)-->
-      <tr>
+      {% for row in subbableShifts %} <!-- row is a tuple containing the following info: (shiftid, time, location, date, day, original employee firstname, original employeelastname)-->
+      
+      <tr id = "shift_{{row[0]}}">
         <td>{{row[1]}}</td>
         <td>{{row[2]}}</td>
         <td>{{row[3]}}</td>
         <td>{{row[4]}}</td>
+        <td>{{row[6] ~ " " ~ row[7]}}</td>
+        <td><button class="button" id = "subButton_ shift_{{row[0]}}_emp_{{row[5]}}" value = "pickupSub" onclick = "pickupDropSub(this, {{employeeID}})"
+          {%if row[5] == employeeID %}
+
+          disabled > Your Shift
+
+          {%else%}
+
+          >Pickup
+
+          {%endif%}
+        </button> </td> 
+  
+       
         
-        <td><button class="button" id = "sub_shift_{{row[0]}}_emp_{{row[5]}}" >
-       {% if employeeID == row[5] %}  <!-- If the subbable shift is actually originally manned by the same employee who is currently logged in-->
-        Your Shift
-        {%else%}
-        Sub? 
-        {% endif %}
-      </button></td>
       <!-- TODO- Encode employee who is logged in information into the load method so that you can pass it to the pickup sub buttons when it's called.-->
           
       </tr>
@@ -139,7 +198,34 @@
       </table>
     </div>
 
-    
+  <p style= "font-weight: bold; font-size: 18px">Shifts You're Subbing For</p>
+    <div class = dyn-height id = "subbingShiftDiv">
+      <table style = "width:80%" id = "subbingShiftTable">
+        <tr> <!-- defining the table headers... -->
+        <th>Time</th>
+        <th>Location</th>
+        <th>Date</th>
+        <th>Day</th>
+        <th>Employee</th>
+        <th>?!?!?!?</th>
+      </tr> 
+      {% for row in subbingShifts %} <!-- row is a tuple containing the following info: (shiftid, time, location, date, day, origEmployeeID, original employee firstname, original employee lastname)-->
+      
+      <tr id = "shift_{{row[0]}}">
+        <td>{{row[1]}}</td>
+        <td>{{row[2]}}</td>
+        <td>{{row[3]}}</td>
+        <td>{{row[4]}}</td>
+        <td>{{row[6] ~ " " ~ row[7]}}</td>
+        <td><button class="button" id = "subButton_ shift_{{row[0]}}_emp_{{row[5]}}" value = "dropSub" onclick = "pickupDropSub(this, {{employeeID}})">Drop</button> </td> 
+        
+        
+      <!-- TODO- Encode employee who is logged in information into the load method so that you can pass it to the pickup sub buttons when it's called.-->
+          
+      </tr>
+      {% endfor %}
+      </table>
+    </div>    
     
     <!-- <p>
       Bacon ipsum dolor sit amet beef venison beef ribs kielbasa. Sausage pig leberkas, t-bone sirloin shoulder bresaola. Frankfurter rump porchetta ham. Pork belly prosciutto brisket meatloaf short ribs.
@@ -149,7 +235,7 @@
     </p> -->
   </section>
     
-  <section id="content4">
+  <section id="content5">
     <p>
       Bacon ipsum dolor sit amet landjaeger sausage brisket, jerky drumstick fatback boudin ball tip turducken. Pork belly meatball t-bone bresaola tail filet mignon kevin turkey ribeye shank flank doner cow kielbasa shankle. Pig swine chicken hamburger, tenderloin turkey rump ball tip sirloin frankfurter meatloaf boudin brisket ham hock. Hamburger venison brisket tri-tip andouille pork belly ball tip short ribs biltong meatball chuck. Pork chop ribeye tail short ribs, beef hamburger meatball kielbasa rump corned beef porchetta landjaeger flank. Doner rump frankfurter meatball meatloaf, cow kevin pork pork loin venison fatback spare ribs salami beef ribs.
     </p>
@@ -157,6 +243,9 @@
       Jerky jowl pork chop tongue, kielbasa shank venison. Capicola shank pig ribeye leberkas filet mignon brisket beef kevin tenderloin porchetta. Capicola fatback venison shank kielbasa, drumstick ribeye landjaeger beef kevin tail meatball pastrami prosciutto pancetta. Tail kevin spare ribs ground round ham ham hock brisket shoulder. Corned beef tri-tip leberkas flank sausage ham hock filet mignon beef ribs pancetta turkey.
     </p>
   </section>
+
+  
+
 
   
 </main>
