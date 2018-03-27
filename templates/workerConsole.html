@@ -18,7 +18,7 @@
   <input id="tab3" type = "radio" name="tabs">
   <label for="tab3">All Shifts</label>
   
-  <input id="tab4" type="radio" name="tabs" onclick = "populateTable()" >
+  <input id="tab4" type="radio" name="tabs">
   <label for="tab4">Sub Requests</label>
 
   <input id="tab5" type="radio" name="tabs">
@@ -177,7 +177,7 @@
         <td>{{row[3]}}</td>
         <td>{{row[4]}}</td>
         <td>{{row[6] ~ " " ~ row[7]}}</td>
-        <td><button class="button" id = "subButton_ shift_{{row[0]}}_emp_{{row[5]}}" value = "pickupSub" onclick = "pickupDropSub(this, {{employeeID}})"
+        <td><button class="button" id = "subButton_shift_{{row[0]}}_emp_{{row[5]}}" value = "pickupSub" onclick = "pickupDropSub(this, {{employeeID}})"
           {%if row[5] == employeeID %}
 
           disabled > Your Shift
@@ -200,7 +200,7 @@
 
   <p style= "font-weight: bold; font-size: 18px">Shifts You're Subbing For</p>
     <div class = dyn-height id = "subbingShiftDiv">
-      <table style = "width:80%" id = "subbingShiftTable">
+      <table style = "width:100%" id = "subbingShiftTable">
         <tr> <!-- defining the table headers... -->
         <th>Time</th>
         <th>Location</th>
@@ -217,7 +217,7 @@
         <td>{{row[3]}}</td>
         <td>{{row[4]}}</td>
         <td>{{row[6] ~ " " ~ row[7]}}</td>
-        <td><button class="button" id = "subButton_ shift_{{row[0]}}_emp_{{row[5]}}" value = "dropSub" onclick = "pickupDropSub(this, {{employeeID}})">Drop</button> </td> 
+        <td><button class="button" id = "subbingButton_ shift_{{row[0]}}_emp_{{row[5]}}" value = "dropSub" onclick = "pickupDropSub(this, {{employeeID}})">Drop</button> </td> 
         
         
       <!-- TODO- Encode employee who is logged in information into the load method so that you can pass it to the pickup sub buttons when it's called.-->
