@@ -238,54 +238,57 @@ def getSubRequestableShifts(db, employeeID):#TODO- MOdify to work based on emplo
 
 	return subRequestableShifts
 
-def requestSub(db, employeeID, shiftID):
-	cursor = db.cursor()
-	subRequest = ("UPDATE shiftEmployeeLinker SET subRequested = TRUE WHERE employeeID = %s and shiftID = %s")
-	cursor.execute(subRequest, (employeeID, shiftID))
-	cursor.close()
-	db.commit()
-	return
-
 def frontEndRequestSub(shiftID, employeeID): #TODO- Modify to work with a username
-	#workerNameTuple = ("Alexis", "Engel")
 	db = MySQLdb.connect(host = "localhost",
 										   user = "Anirudh",
 										   passwd = "password",
 										   db = "test")
-	cursor = db.cursor();
-	#get employeeID
-	# query = ("SELECT id FROM employeeinfo WHERE firstName = %s AND lastName = %s")
-	# cursor.execute(query, workerNameTuple)
-	# result = cursor.fetchone()
-	# employeeID = result[0]
-	requestSub(db, employeeID, shiftID)
+	
+	subRequestSuccessful = requestSub(db, employeeID, shiftID)
+	db.close()
+	return subRequestSuccessful
+
+def requestSub(db, employeeID, shiftID):
+	cursor = db.cursor()
+	try:
+		subRequest = ("UPDATE shiftEmployeeLinker SET subRequested = TRUE WHERE employeeID = %s and shiftID = %s")
+		cursor.execute(subRequest, (employeeID, shiftID))
+	except Exception as e:
+		#log error
+		return False
 	cursor.close()
-	#db.close()
+	db.commit()
+	return True
+
+
+def frontEndUnrequestSub(shiftID, employeeID): #TODO- Modify to work with a username
+	db = MySQLdb.connect(host = "localhost",
+										   user = "Anirudh",
+										   passwd = "password",
+										   db = "test")
+
+	subUnrequestSuccessful = unrequestSub(db, employeeID, shiftID)
+	
+	db.close()
+
+	return subUnrequestSuccessful
 
 def unrequestSub(db, employeeID, shiftID):
 	cursor = db.cursor()
-	subRequest = ("UPDATE shiftEmployeeLinker SET subRequested = FALSE, subFilled = FALSE WHERE employeeID = %s and shiftID = %s")
-	cursor.execute(subRequest, (employeeID, shiftID))
+	
+	try:
+		subRequest = ("UPDATE shiftEmployeeLinker SET subRequested = FALSE, subFilled = FALSE WHERE employeeID = %s and shiftID = %s")
+		cursor.execute(subRequest, (employeeID, shiftID))
+	
+	except Exception as e:
+		#log error
+		return False
 	cursor.close()
+
 	db.commit()
-	return
+	return True
 
-def frontEndUnrequestSub(shiftID, employeeID): #TODO- Modify to work with a username
-	# workerNameTuple = ("Alexis", "Engel")
-	db = MySQLdb.connect(host = "localhost",
-										   user = "Anirudh",
-										   passwd = "password",
-										   db = "test")
-	cursor = db.cursor();
-	#get employeeID
-	# query = ("SELECT id FROM employeeinfo WHERE firstName = %s AND lastName = %s")
-	# cursor.execute(query, workerNameTuple)
-	# result = cursor.fetchone()
-	# employeeID = result[0]
 
-	unrequestSub(db, employeeID, shiftID)
-	cursor.close()
-	#db.close()
 
 def getSubStatus(db, shiftID, employeeID): #TODO: Make it so that it passes in username of employee as well.
 	#employeeID = 1038 #This is Alexis Engel's employeeid
@@ -299,6 +302,18 @@ def getSubStatus(db, shiftID, employeeID): #TODO: Make it so that it passes in u
 
 	return result
 
+
+def frontEndPickupSub(shiftID, origEmployeeID, subEmployeeID):
+	db = MySQLdb.connect(host = "localhost",
+										   user = "Anirudh",
+										   passwd = "password",
+										   db = "test")
+	
+	
+
+	pickupSub(db, shiftID, origEmployeeID, subEmployeeID)
+
+	db.close()
 
 def pickupSub(db, shiftID, origEmployeeID, subEmployeeID):
 
@@ -314,6 +329,21 @@ def pickupSub(db, shiftID, origEmployeeID, subEmployeeID):
 	cursor.close()
 	db.commit()
 
+
+
+def frontEndDropSub(shiftID, origEmployeeID):
+	db = MySQLdb.connect(host = "localhost",
+										   user = "Anirudh",
+										   passwd = "password",
+										   db = "test")
+
+	
+	#print (origEmployeeID)
+	
+	#print (shiftID)
+	dropSub(db, shiftID, origEmployeeID)
+
+	db.close()
 
 def dropSub(db, shiftID, origEmployeeID):
 
@@ -334,16 +364,33 @@ def dropSub(db, shiftID, origEmployeeID):
 	cursor.close()
 	db.commit()
 
-def getShiftID(db, shiftID, employeeID):
-	subQuery = ("SELECT shiftlist.checkinTime, shiftlist.location, shiftlist.date, shiftlist.day, shiftEmployeeLinker.subRequested, shiftEmployeeLinker.subFilled FROM ShiftList "
+
+def frontEndGetShiftInfo(shiftID, employeeID): #retrieve all data about a particular shift.
+	db = MySQLdb.connect(host = "localhost",
+										   user = "Anirudh",
+										   passwd = "password",
+										   db = "test")
+
+	shiftInfo = getShiftInfo(db, shiftID, employeeID)
+
+	db.close()
+
+	return shiftInfo
+
+def getShiftInfo(db, shiftID, employeeID):
+	subQuery = ("SELECT shiftlist.checkinTime, shiftlist.location, shiftlist.date, shiftlist.day, employeeinfo.firstName, employeeInfo.lastName, shiftEmployeeLinker.subRequested, shiftEmployeeLinker.subFilled FROM ShiftList "
 						"INNER JOIN ShiftEmployeeLinker "
 						"ON ShiftList.id = ShiftEmployeeLinker.shiftID "
+						"INNER JOIN employeeInfo "
+						"ON shiftEmployeeLinker.employeeID = employeeInfo.id "
 						"WHERE (ShiftEmployeeLinker.employeeID = %s "
 						"AND shiftemployeelinker.shiftid = %s)")
 
 	cursor = db.cursor()
 
 	cursor.execute(subQuery, (employeeID, shiftID))
+
+	print (cursor._last_executed)
 
 	return (cursor.fetchone())
 

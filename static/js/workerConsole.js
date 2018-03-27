@@ -23,11 +23,9 @@ function updateClock(){ // A function to update the clock.
 
   }
 
-function sayHello(){
-  
+function sayHello(button){
+  alert(button.id)
 }
-
-
 function checkIn(employeeID, shiftID){ //A function to check in a worker.
 
   
@@ -50,7 +48,6 @@ function checkIn(employeeID, shiftID){ //A function to check in a worker.
   
 
 }
-
 
 
 function requestUnrequestSub(element, shiftID, employeeID){
@@ -77,52 +74,52 @@ function requestUnrequestSub(element, shiftID, employeeID){
   $.get('/')
 }
 
-function refreshSubRequestStatus(){
+// function refreshSubRequestStatus(){
   
-  var Table = document.getElementById("subRequestableShiftTable")
-  //Now, we iterate through every row in the table:
-  for (i = 1; i < Table.rows.length; i++){
-    row = Table.rows[i];
-    //At each row, find the 5th cell, index 4, which has the button for sub requests.
-    cell = row.cells[4]
+//   var Table = document.getElementById("subRequestableShiftTable")
+//   //Now, we iterate through every row in the table:
+//   for (i = 1; i < Table.rows.length; i++){
+//     row = Table.rows[i];
+//     //At each row, find the 5th cell, index 4, which has the button for sub requests.
+//     cell = row.cells[4]
 
-    //next get the button's id, and then the shiftid.
-    theButton = cell.firstChild;
-    var idArray = theButton.id.split(" ");
-    var shiftID = idArray[1];
+//     //next get the button's id, and then the shiftid.
+//     theButton = cell.firstChild;
+//     var idArray = theButton.id.split(" ");
+//     var shiftID = idArray[1];
 
-    //alert(shiftID)
+//     //alert(shiftID)
 
-    updateSubRequestButton(theButton, shiftID)
+//     updateSubRequestButton(theButton, shiftID)
 
 
    
 
 
 
-  }
+//   }
 
-}
+// }
 
-function updateSubRequestButton(buttonID, shiftID){//a callback function for the buttons. Further Reading: https://stackoverflow.com/questions/14754619/jquery-ajax-success-callback-function-definition
-  //https://stackoverflow.com/questions/11576176/wait-for-a-jquery-ajax-callback-from-calling-function
+// function updateSubRequestButton(buttonID, shiftID){//a callback function for the buttons. Further Reading: https://stackoverflow.com/questions/14754619/jquery-ajax-success-callback-function-definition
+//   //https://stackoverflow.com/questions/11576176/wait-for-a-jquery-ajax-callback-from-calling-function
 
-  postData = JSON.stringify({"shiftID":shiftID})
+//   postData = JSON.stringify({"shiftID":shiftID})
    
-   $.get("/getSubRequestStatus", postData, function(data){ //If subrequest is filled, then you will need to update the button.
-      //TODO: Figure out how to deal with this and JSON.
+//    $.get("/getSubRequestStatus", postData, function(data){ //If subrequest is filled, then you will need to update the button.
+//       //TODO: Figure out how to deal with this and JSON.
       
-      var subFilled = data.subFilled;
-      //If a sub has been filled, we must change the button's text.
-      if (subFilled == 1){
-        buttonID.innerHTML = "Filled"
-        buttonID.value = "subRequested"
-      } 
+//       var subFilled = data.subFilled;
+//       //If a sub has been filled, we must change the button's text.
+//       if (subFilled == 1){
+//         buttonID.innerHTML = "Filled"
+//         buttonID.value = "subRequested"
+//       } 
      
 
 
-    }, "json" )
-}
+//     }, "json" )
+// }
 
 
 // function refreshSubbableShifts(){
@@ -167,7 +164,10 @@ function updateSubRequestButton(buttonID, shiftID){//a callback function for the
 
 // }
 
-function deleteSubbableShiftRow(Table, rowindex, shiftID, employeeID){
+function deleteSubbableShiftRow(shiftID, employeeID){
+  var table = document.getElementById("subbableShiftTable")
+  rowIndex = table.rows.length; //Get the length of the table.
+
   postData = {"shiftID":shiftID, "employeeID":employeeID}
   $.get("/getSubRequestStatus", postData, function(data){ //If sub is filled, then we will delete the row that it originally came from.
       //TODO: Figure out how to deal with this and JSON.
@@ -176,7 +176,7 @@ function deleteSubbableShiftRow(Table, rowindex, shiftID, employeeID){
       var subRequested = data.subRequested;
       //If a sub has been filled or the request has been rescinded, we must delete the row.
       if (subFilled == 1 || subRequested == 0){
-        Table.deleteRow(rowindex)
+        table.deleteRow(rowindex)
       } 
      
 
@@ -227,7 +227,7 @@ function insertNewSubbableShiftRow(shiftID, origEmployeeID){
   //How this will work:
   //submit an AJAX call to get the data from the row specified by shiftID and origEmployeeID.
   
-  $.get('/getSubShiftID', {"shiftID":shiftID, "origEmployeeID":origEmployeeID}, function (data){ 
+  $.get('/getSubShiftInfo', {"shiftID":shiftID, "origEmployeeID":origEmployeeID}, function (data){ 
 
     //First, check that the shift is still requesting a sub:
     if (data.subRequested == true){//if yes, then go ahead and insert a row into the open shifts.
@@ -236,6 +236,16 @@ function insertNewSubbableShiftRow(shiftID, origEmployeeID){
     var location = data.location
     var date = data.date
     var day = data.day
+    var employeeName = data.employeeName
+    var employeeID = data.employeeID
+    var subButton = document.createElement("button");
+    subButton.className = "button";
+    subButton.value = "pickupSub";
+    subButton.id = "subButton_shift_" + shiftID + "_emp_" + origEmployeeID;
+    subButton.onclick = function(){pickupDropSub(subButton, employeeID);}
+
+
+
     //Once you have the data, create a row and insert the necessary data.
 
     var row = table.insertRow(rowIndex);
@@ -251,7 +261,18 @@ function insertNewSubbableShiftRow(shiftID, origEmployeeID){
     cell2.innerHTML = location
     cell3.innerHTML = date
     cell4.innerHTML = day
-    cell
+    cell5.innerHTML = employeeName
+    cell6.appendChild(subButton);
+
+    if (data.subbable == false){//Disable button if it's for a shift of the logged in user.
+      subButton.disabled = true;
+      subButton.innerHTML = "Your Shift";
+
+    }
+    else{
+      subButton.innerHTML = "Sub?"
+      subButton.disabled = false;
+    }
 
 
     }
@@ -292,6 +313,28 @@ function pickupDropSub(theButton, subEmployeeID){
 
     theButton.value = "dropSub" //update button value to reflect that we unrequested a sub.
     
+    table = document.getElementById("subbingShiftTable");
+
+    var newRow = table.insertRow();
+
+    for (i = 0; i < 5; i++){
+      //iterate through every cell in parent row and copy information over.
+      var cell = newRow.insertCell(i)
+      cell.innerHTML = parentRow.cells[i].innerHTML
+    }
+
+    var lastCell = newRow.insertCell(5);
+    var newButton = document.createElement('button')
+    newButton.className = "button";
+
+    lastCell.appendChild(newButton)
+    newButton.value = "dropSub";
+    newButton.id = "subbingButton_shift_" + shiftID + "_emp_" + origEmployeeID;
+    newButton.onclick = function(){pickupDropSub(newButton, subEmployeeID)}
+    newButton.innerText = "Drop"
+    
+
+
     //document.getElementById("subbableShiftTable").deleteRow(parentRowIndex)
 
     //Consider also dropping the row that the button exists in. Or not-currently it'll be autodropped as the refreshSubbableShifts method runs.
@@ -379,7 +422,7 @@ function transmitData(data){ //IMPORTANT- Pass in the data as a string.
 function receiveTransmission(msg){
   //Each transmission message is plaintext in the form type_data_data_data_....
   //There are a variety of transmissions that we could receive. The type of transmission can be obtained from index 0 of the array resulting from splitting the message by _
-  console.log(msg)
+  //console.log(msg)
   msgArray = msg.split("_");
 
   msgType = msgArray[0];
@@ -387,6 +430,23 @@ function receiveTransmission(msg){
   if (msgType == "pickupSub") {//this event indicates that a particular sub-requested shift was just picked up by a sub. It has data in the form pickupSub_shift_shiftID_emp_origEmpID 
     shiftID = msgArray[2]
     origEmployeeID = msgArray[4]
+
+    buttonID = "subButton_shift_" + shiftID + "_emp_" + origEmployeeID
+
+    theButton = document.getElementById(buttonID);
+
+    console.log(buttonID)
+    console.log(theButton)
+
+    //having found the button, find its row...
+    var parentCell = theButton.parentElement;
+    var parentRow = parentCell.parentElement;
+    var parentRowIndex = parentRow.rowIndex;
+    var table = document.getElementById("subbableShiftTable");
+
+    table.deleteRow(parentRowIndex)
+
+
   }
 
   else if(msgType == "dropSub"){ //this event indicates that a particular shift which was being subbed no longer is. It has data in the form dropSub_shift_shiftID_emp_origEmpID 
@@ -412,12 +472,13 @@ window.setInterval('updateClock()', 1000)
 
 
 var source = new EventSource('/broadcast');
-source.addEventListener('message', function(e){
+source.addEventListener('ping', function(e){
 
   console.log(e.data)
   receiveTransmission(e.data);
 
 })
+
 
 
 //https://stackoverflow.com/questions/12693947/jquery-ajax-how-to-send-json-instead-of-querystring

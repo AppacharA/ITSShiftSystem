@@ -1,7 +1,8 @@
 from flask import Flask, render_template, request, jsonify, Response
 import json
 import MySQLdb
-from workerFunctions import frontEndCheckIn, getSubRequestableShifts, frontEndGetSubbableShifts, frontEndRequestSub, frontEndUnrequestSub, getCurrentShift, getCurrentEmployee, getSubbingShifts
+from workerFunctions import frontEndCheckIn, getSubRequestableShifts, getSubbableShifts, frontEndGetSubbableShifts, frontEndRequestSub, frontEndUnrequestSub, frontEndPickupSub, frontEndDropSub,getCurrentShift, getCurrentEmployee, getSubbingShifts, getSubStatus
+
 import workerFunctions
 from datetime import datetime
 import queue
@@ -9,11 +10,9 @@ import queue
 app = Flask(__name__)
 
 
+eventStream = queue.Queue() #must be global.
 
-def transmit(data):
-	global eventStream
 
-	eventStream.put(data)
 
 #TODO- Essentially, rework all these methods to be frontend. Login to the database upon accessing this page, and just pass the database to every single method as its called.
 
@@ -27,9 +26,7 @@ def main(**kwargs):
 	checkedIn = False
 	checkInTime = None
 	shiftInfo = None
-
-	global eventStream
-	eventStream = queue.Queue()
+	eventStream.put("")
 	#Eventually you'll want to call this code only if the user is authenticated and logged in.
 	db = MySQLdb.connect(host = "localhost",
 						 user = "Anirudh",
@@ -60,6 +57,7 @@ def main(**kwargs):
 
 		cur.execute("SELECT checkinTime, location from shiftlist where id = %s", (currentShiftID,))
 		shiftInfo = cur.fetchone()
+	
 	cur.close()
 
 	
@@ -68,7 +66,7 @@ def main(**kwargs):
 
 	#print (subbingShifts)
 
-	subbableShifts = frontEndGetSubbableShifts()
+	subbableShifts = getSubbableShifts(db)
 	#print (len(subbableShifts))
 	#subbableShifts = []
 	db.close()
@@ -82,10 +80,7 @@ def main(**kwargs):
 
 	return render_template('workerConsole.html', data = (checkedIn, checkInTime), subRequestableShifts = subRequestableShifts, subbableShifts = subbableShifts, subbingShifts = subbingShifts, employeeID = employeeID, shiftID = currentShiftID, shiftInfo = shiftInfo, location = location)
 
-# #rendering the HTML page which has the button
-# @app.route('/json')
-# def json():
-#     return render_template('json.html')
+
 
 #background process happening without any refreshing
 @app.route('/checkin', methods = ['POST'])
@@ -119,7 +114,7 @@ def unrequestSub():
 	return ("nothing")
 
 @app.route('/pickupSub', methods = ['POST'])
-def frontEndPickupSub():
+def pickupSub():
 	db = MySQLdb.connect(host = "localhost",
 										   user = "Anirudh",
 										   passwd = "password",
@@ -130,7 +125,7 @@ def frontEndPickupSub():
 	shiftID = request.form["shiftID"]
 	
 
-	workerFunctions.pickupSub(db, shiftID, origEmployeeID, subEmployeeID)
+	frontEndPickupSub(shiftID, origEmployeeID, subEmployeeID)
 
 	data = "pickupSub_shift_" + shiftID + "_emp_" + origEmployeeID #transmit that the sub was picked up"
 	transmit(data)
@@ -138,7 +133,7 @@ def frontEndPickupSub():
 
 
 @app.route('/dropSub', methods = ['POST'])
-def frontEndDropSub():
+def dropSub():
 	db = MySQLdb.connect(host = "localhost",
 										   user = "Anirudh",
 										   passwd = "password",
@@ -155,11 +150,12 @@ def frontEndDropSub():
 	#print (origEmployeeID)
 	
 	#print (shiftID)
-	workerFunctions.dropSub(db, shiftID, origEmployeeID)
+	frontEndDropSub(shiftID, origEmployeeID)
 
 	data = "dropSub_shift_" + shiftID + "_emp_" + origEmployeeID #transmit that the drop happened.
 	transmit(data)
 	return ("nothing")
+
 
 
 @app.route('/getSubRequestStatus', methods = ['GET'])
@@ -174,7 +170,7 @@ def getSubRequestStatus():
 										   passwd = "password",
 										   db = "test")
 
-	subStatus = workerFunctions.getSubStatus(db, shiftID, employeeID)
+	subStatus = getSubStatus(db, shiftID, employeeID)
 	subFilled = subStatus[1]
 	subRequested = subStatus[0]
 	db.close()
@@ -183,7 +179,7 @@ def getSubRequestStatus():
 	return (jsonify({"subFilled":subFilled, "subRequested":subRequested}))
 
 @app.route('/getSubbableShifts', methods = ['GET'])
-def getSubbableShifts():
+def frontEndgetSubbableShifts():
 	shifts = frontEndGetSubbableShifts()
 
 	shiftInfoList = []
@@ -213,30 +209,36 @@ def frontEndGetSubbingShifts():
 
 	db.close()
 
-@app.route('/getSubShiftID', methods = ['GET'])
-def frontEndGetSubShiftID():
-	shiftID = request.args.get('shiftID') #https://stackoverflow.com/questions/10434599/how-to-get-data-received-in-flask-request
-	employeeID = request.args.get('origEmployeeID')
+@app.route('/getSubShiftInfo', methods = ['GET'])
+def getSubShiftInfo():
+	subbable = True
 
-	db = MySQLdb.connect(host = "localhost",
-										   user = "Anirudh",
-										   passwd = "password",
-										   db = "test")
-	shiftInfo = workerFunctions.getShiftID(db, shiftID, employeeID)
+	shiftID = request.args.get('shiftID') #https://stackoverflow.com/questions/10434599/how-to-get-data-received-in-flask-request
+	origEmployeeID = request.args.get('origEmployeeID')
+
+	employeeID = 1006 #this line is a placeholder. Eventually we'll get employeeID from flask-logins.
+	
+	shiftInfo = workerFunctions.frontEndGetShiftInfo(shiftID, origEmployeeID)
 	#print (shiftInfo)
 	# time = shiftInfo[0].strftime("%H:%M")
 	time = (datetime.min + shiftInfo[0]).time().strftime("%H:%M") #Python retrieves MySQL TIME values as timedeltas, which means you have to add the timedelta interval to a 0:00 time in python to get the actual time. See https://stackoverflow.com/questions/764184/python-how-do-i-get-time-from-a-datetime-timedelta-object for more info.
 	location = shiftInfo[1]
 	date = shiftInfo[2]
 	day = shiftInfo[3]
-	subRequested = shiftInfo[4]
-	subFilled = shiftInfo[5]
+	employeeName = shiftInfo[4] + shiftInfo[5]
+	subRequested = shiftInfo[6]
 
+	if employeeID == origEmployeeID:
+		subbable = False
 
-	db.close()
+	#BTW You need to rework all the employeeID stuff so that it validates on teh backend, rather than from the frontend.
 
-	return jsonify({"time": time, "location":location, "date":date, "day":day, "subRequested":subRequested, "subFilled":subFilled})
+	return jsonify({"time": time, "location":location, "date":date, "day":day, "subRequested":subRequested, "employeeName":employeeName, "subbable":subbable, "employeeID":employeeID})
 	#return ("nothing")
+
+
+
+
 
 
 @app.route('/receiveAndTransmit', methods = ['POST'])
@@ -244,7 +246,7 @@ def receive(): #stores events in a queue...
 	data = request.form['data']
 	print (data)
 
-	global eventStream
+	#global eventStream
 	eventStream.put(data)
 
 	#broadcast(data)
@@ -252,15 +254,21 @@ def receive(): #stores events in a queue...
 	return ("nothing")
 
 
+def transmit(data):
+	#global eventStream
 
+	eventStream.put(data)
 		
 
 @app.route('/broadcast') #experiment with seeing if you can put this in another file?
 def broadcast():
-	global eventStream
 	
+	#global eventStream
 	data = eventStream.get()
-	msg = 'data:' + data + '\n\n'
+	msg = "event: ping\n"
+	msg = msg + 'data: ' + data + '\n\n'
+	print (msg)
+
 	return Response(msg, mimetype="text/event-stream")
 
 
