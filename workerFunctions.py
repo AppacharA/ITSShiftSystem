@@ -6,41 +6,7 @@ import daySchedulingFunctions
 import AuxiliaryFunctions
 import re
 
-def checkIn(db, workerNameTuple, actualCheckInTime, location, date): #TODO: Decide if you should checkin based on worker name or username. If username, how do you populate the employeeinfo with all the usernames at the getgo?
-	cursor = db.cursor()
-	
-	#get employee info.
-	employeeQuery = ("SELECT id FROM employeeInfo WHERE firstName = %s AND lastName = %s")
-	cursor.execute(employeeQuery, workerNameTuple)
-	result = cursor.fetchone()
-	employeeID = result[0]
-
-	#get shift info.
-	shiftQuery = ("SELECT id FROM shiftList WHERE checkinTime <= %s AND location = %s AND Date = %s "
-					"ORDER BY id DESC LIMIT 1")
-	cursor.execute(shiftQuery, (actualCheckInTime, location, date))
-	
-	result = cursor.fetchone()
-	shiftID = result[0]
-
-
-	#build and execute the actual checkin Query
-	checkinQuery = ("UPDATE shiftEmployeeLinker SET checkedIn = TRUE, checkinTime = %s "
-					"WHERE employeeID = %s AND shiftID = %s")
-
-
-
-
-	try:
-		cursor.execute(checkinQuery, (actualCheckInTime, employeeID, shiftID))
-		db.commit()
-	except Exception as e:
-		print (cursor._last_executed)
-		print (e)
-
-	cursor.close()
-
-def checkInEmployeeID(db, employeeID, actualCheckInTime, shiftID): #TODO: Decide if you should checkin based on worker name or username. If username, how do you populate the employeeinfo with all the usernames at the getgo?
+def checkInEmployee(db, employeeID, actualCheckInTime, shiftID): #TODO: Decide if you should checkin based on worker name or username. If username, how do you populate the employeeinfo with all the usernames at the getgo?
 	cursor = db.cursor()
 	
 	# #get employee info.
@@ -82,7 +48,7 @@ def frontEndCheckIn(employeeID, shiftID):
 	currentDate = currentInfo.strftime("%Y-%m-%d")
 	checkinTime = currentInfo.strftime("%H:%M")
 
-	checkInEmployeeID(db, employeeID, checkinTime, shiftID)
+	checkInEmployee(db, employeeID, checkinTime, shiftID)
 	#implement a successcheck..
 	return checkinTime
 	#ALSO FIGURE OUT HOW TO GET THE WORKER NAME/ USERNAME. PRESUMABLY FROM THE LOGGING IN ITSELF
@@ -102,11 +68,17 @@ def getCurrentShift(db, location, employeeID): #Given the current time, location
 	# currentTime = "08:00"
 	
 
-	#get shift info.
+	#get shift info. This query will search for all possible shifts for an employee, including shifts they are subbing for.
 	shiftQuery = ("SELECT shiftid FROM shiftEmployeeLinker "
 					"INNER JOIN shiftlist "
 					"ON shiftlist.id = shiftEmployeeLinker.shiftid "
 					"WHERE (shiftlist.checkinTime <= %s AND Date = %s AND employeeID = %s) "
+					"UNION "
+					"SELECT shiftid FROM subbedShifts "
+					"INNER JOIN shiftlist "
+					"ON shiftlist.id = subbedShifts.shiftid "
+					"WHERE (shiftlist.checkinTime <= %s AND Date = %s AND subEmployeeID = %s) "
+
 					
 					"ORDER BY id DESC LIMIT 1")
 	cursor.execute(shiftQuery, (currentTime, currentDate, employeeID))
